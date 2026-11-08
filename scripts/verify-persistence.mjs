@@ -1,4 +1,4 @@
-// Optional durability check. Requires Node.js 18+ and a JDK 27 JAVA_HOME.
+// Optional H2 durability check. Requires Node.js 18+ and a JDK 27 JAVA_HOME.
 // Runs two isolated instances of the packaged application; real data is untouched.
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
@@ -13,9 +13,9 @@ if (!process.env.JAVA_HOME) throw new Error('Set JAVA_HOME to JDK 27 first.');
 const java = join(process.env.JAVA_HOME.trim(), 'bin', process.platform === 'win32' ? 'java.exe' : 'java');
 const directory = await mkdtemp(join(project, 'target', 'persistence-check-'));
 const environment = { ...process.env };
-delete environment.APP_DB_URL;
-delete environment.APP_DB_USERNAME;
-delete environment.APP_DB_PASSWORD;
+environment.APP_DB_URL = 'jdbc:h2:file:./data/competencies;DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0';
+environment.APP_DB_USERNAME = 'sa';
+environment.APP_DB_PASSWORD = '';
 let ownedProcess;
 
 async function stop() {

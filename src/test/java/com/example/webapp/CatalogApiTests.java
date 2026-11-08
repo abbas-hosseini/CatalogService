@@ -152,6 +152,133 @@ class CatalogApiTests {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"BELOW_DIPLOMA", "DIPLOMA", "ASSOCIATE", "BACHELOR", "DOCTORATE"})
+    void employeeEducationAndStartDateRoundTrip(String educationLevel) throws Exception {
+        long id = create("employees", Map.of("personnelCode", "EDU", "firstName", "کارمند", "lastName", "آزمایشی",
+            "educationLevel", educationLevel, "startDate", "2020-03-20"));
+        JsonNode row = read("employees").get(0);
+        assertThat(row.get("educationLevel").asText()).isEqualTo(educationLevel);
+        assertThat(row.get("startDate").asText()).isEqualTo("2020-03-20");
+
+        assertStatus("PUT", "employees/" + id, Map.of("personnelCode", "EDU", "firstName", "کارمند", "lastName", "آزمایشی",
+            "educationLevel", "DOCTORATE", "startDate", "2021-04-10"), 200);
+        row = read("employees").get(0);
+        assertThat(row.get("educationLevel").asText()).isEqualTo("DOCTORATE");
+        assertThat(row.get("startDate").asText()).isEqualTo("2021-04-10");
+    }
+
+    @Test
+    void employeeNewFieldsCanBeOmittedOrCleared() throws Exception {
+        var payload = new HashMap<String, Object>(Map.of("personnelCode", "OPTIONAL", "firstName", "کارمند", "lastName", "آزمایشی"));
+        long id = create("employees", payload);
+        assertThat(read("employees").get(0).get("educationLevel").isNull()).isTrue();
+        assertThat(read("employees").get(0).get("startDate").isNull()).isTrue();
+        payload.put("educationLevel", "BACHELOR");
+        payload.put("startDate", "2022-09-01");
+        assertStatus("PUT", "employees/" + id, payload, 200);
+        payload.put("educationLevel", null);
+        payload.put("startDate", null);
+        assertStatus("PUT", "employees/" + id, payload, 200);
+        assertThat(read("employees").get(0).get("educationLevel").isNull()).isTrue();
+        assertThat(read("employees").get(0).get("startDate").isNull()).isTrue();
+    }
+
+    @Test
+    void employeeRejectsUnknownEducationAndMalformedDate() throws Exception {
+        var payload = new HashMap<String, Object>(Map.of("personnelCode", "INVALID", "firstName", "کارمند", "lastName", "آزمایشی",
+            "educationLevel", "UNKNOWN"));
+        var response = request("POST", "employees", payload);
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(json.readTree(response.body()).get("fields").has("educationLevel")).isTrue();
+        payload.put("educationLevel", "DIPLOMA");
+        payload.put("startDate", "not-a-date");
+        assertStatus("POST", "employees", payload, 400);
+        assertThat(read("employees").size()).isZero();
+    }
+
+    @Test
+    void scoreSheetSavesAllChangesAndPreservesUnchangedScoresNotesAndOtherEmployees() throws Exception {
+        long employee = create("employees", Map.of("personnelCode", "E1", "firstName", "نام", "lastName", "اول"));
+        long other = create("employees", Map.of("personnelCode", "E2", "firstName", "نام", "lastName", "دوم"));
+        var factors = new ArrayList<Long>();
+        for (int i = 0; i < 6; i++)
+            factors.add(create("factors", Map.of("code", "F" + i, "title", "عامل " + i)));
+        for (int i = 0; i < 4; i++)
+            create("scores", Map.of("employeeId", employee, "factorId", factors.get(i), "score", 60,
+                "assessedOn", "2025-01-01", "notes", "یادداشت قبلی"));
+        create("scores", Map.of("employeeId", other, "factorId", factors.get(0), "score", 90, "assessedOn", "2025-01-01"));
+        long originalId = jdbc.queryForObject("SELECT id FROM employee_scores WHERE employee_id = ? AND factor_id = ?",
+            Long.class, employee, factors.get(0));
+        var cleared = new HashMap<String, Object>();
+        cleared.put("factorId", factors.get(1));cleared.put("score", null);
+        var payload = Map.of("scores", List.of(
+            Map.of("factorId", factors.get(0), "score", 75.25), cleared,
+            Map.of("factorId", factors.get(2), "score", 60),
+            Map.of("factorId", factors.get(4), "score", 0),
+            Map.of("factorId", factors.get(5), "score", 100)));
+        var response = request("PUT", "employees/" + employee + "/scores", payload);
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+        JsonNode saved = json.readTree(response.body());
+        assertThat(saved.size()).isEqualTo(5);
+        var byFactor = new HashMap<Long, JsonNode>();
+        saved.forEach(row -> {
+            assertThat(row.get("employeeId").asLong()).isEqualTo(employee);
+            byFactor.put(row.get("factorId").asLong(), row);
+        });
+        assertThat(byFactor.get(factors.get(0)).get("id").asLong()).isEqualTo(originalId);
+        assertThat(byFactor.get(factors.get(0)).get("score").asDouble()).isEqualTo(75.25);
+        assertThat(byFactor.get(factors.get(0)).get("notes").asText()).isEqualTo("یادداشت قبلی");
+        assertThat(byFactor.get(factors.get(0)).get("assessedOn").asText()).isEqualTo(LocalDate.now().toString());
+        assertThat(byFactor).doesNotContainKey(factors.get(1));
+        for (int i : List.of(2, 3)) {
+            assertThat(byFactor.get(factors.get(i)).get("score").asDouble()).isEqualTo(60);
+            assertThat(byFactor.get(factors.get(i)).get("assessedOn").asText()).isEqualTo("2025-01-01");
+            assertThat(byFactor.get(factors.get(i)).get("notes").asText()).isEqualTo("یادداشت قبلی");
+        }
+        assertThat(byFactor.get(factors.get(4)).get("score").asDouble()).isZero();
+        assertThat(byFactor.get(factors.get(5)).get("score").asDouble()).isEqualTo(100);
+        assertThat(byFactor.get(factors.get(4)).get("assessedOn").asText()).isEqualTo(LocalDate.now().toString());
+        assertThat(jdbc.queryForObject("SELECT score FROM employee_scores WHERE employee_id = ?", Double.class, other)).isEqualTo(90);
+        response = request("PUT", "employees/" + employee + "/scores", payload);
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(json.readTree(response.body())).isEqualTo(saved);
+    }
+
+    @ParameterizedTest
+    @ValueSource(doubles = {-0.01, 100.01, 50.123})
+    void invalidScoreSheetDoesNotPartiallySave(double invalidScore) throws Exception {
+        long employee = create("employees", Map.of("personnelCode", "E", "firstName", "نام", "lastName", "نام"));
+        long first = create("factors", Map.of("code", "F1", "title", "عامل اول"));
+        long second = create("factors", Map.of("code", "F2", "title", "عامل دوم", "parentId", first));
+        create("scores", Map.of("employeeId", employee, "factorId", first, "score", 80, "assessedOn", "2025-01-01"));
+        JsonNode before = read("scores");
+        var response = request("PUT", "employees/" + employee + "/scores", Map.of("scores", List.of(
+            Map.of("factorId", first, "score", 20), Map.of("factorId", second, "score", invalidScore))));
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
+        assertThat(json.readTree(response.body()).get("fields").has("scores[1].score")).isTrue();
+        assertThat(read("scores")).isEqualTo(before);
+    }
+
+    @Test
+    void scoreSheetValidatesEmployeesFactorsDuplicateRowsAndRequestShape() throws Exception {
+        long employee = create("employees", Map.of("personnelCode", "E", "firstName", "نام", "lastName", "نام"));
+        long factor = create("factors", Map.of("code", "F", "title", "عامل"));
+        create("scores", Map.of("employeeId", employee, "factorId", factor, "score", 80, "assessedOn", "2025-01-01"));
+        JsonNode before = read("scores");
+        String path = "employees/" + employee + "/scores";
+        var validRow = Map.of("factorId", factor, "score", 20);
+        assertStatus("PUT", path, Map.of("scores", List.of(validRow, Map.of("factorId", 999999, "score", 30))), 400);
+        assertStatus("PUT", path, Map.of("scores", List.of(validRow, validRow)), 400);
+        assertStatus("PUT", path, Map.of(), 400);
+        assertStatus("PUT", path, Map.of("scores", Arrays.asList((Object) null)), 400);
+        assertStatus("PUT", path, Map.of("scores", List.of(Map.of("score", 30))), 400);
+        assertStatus("PUT", path, Map.of("scores", List.of(Map.of("factorId", -1, "score", 30))), 400);
+        assertStatus("PUT", "employees/999999/scores", Map.of("scores", List.of(validRow)), 404);
+        assertStatus("PUT", path, Map.of("scores", List.of()), 200);
+        assertThat(read("scores")).isEqualTo(before);
+    }
+
     long create(String resource, Object body) throws Exception {
         var response = request("POST", resource, body);
         assertThat(response.statusCode()).as(response.body()).isEqualTo(201);

@@ -6,6 +6,8 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Date;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -16,22 +18,29 @@ public class CatalogRepository {
     public CatalogRepository(NamedParameterJdbcTemplate jdbc) { this.jdbc = jdbc; }
 
     public List<Map<String, Object>> list(Catalog catalog) {
-        return jdbc.query("SELECT * FROM " + catalog.table + " ORDER BY id DESC", (rs, rowNum) -> {
-            Map<String, Object> row = new LinkedHashMap<>();
-            var meta = rs.getMetaData();
-            for (int i = 1; i <= meta.getColumnCount(); i++) {
-                String column = meta.getColumnName(i).toLowerCase(Locale.ROOT);
-                StringBuilder key = new StringBuilder();
-                boolean uppercase = false;
-                for (char c : column.toCharArray()) {
-                    if (c == '_') { uppercase = true; }
-                    else { key.append(uppercase ? Character.toUpperCase(c) : c); uppercase = false; }
-                }
-                Object value = rs.getObject(i);
-                row.put(key.toString(), value instanceof Date date ? date.toLocalDate().toString() : value);
+        return jdbc.query("SELECT * FROM " + catalog.table + " ORDER BY id DESC", this::mapRow);
+    }
+
+    public List<Map<String, Object>> employeeScores(long employeeId) {
+        return jdbc.query("SELECT * FROM employee_scores WHERE employee_id = :employeeId ORDER BY id DESC",
+            Map.of("employeeId", employeeId), this::mapRow);
+    }
+
+    private Map<String, Object> mapRow(ResultSet rs, int rowNum) throws SQLException {
+        Map<String, Object> row = new LinkedHashMap<>();
+        var meta = rs.getMetaData();
+        for (int i = 1; i <= meta.getColumnCount(); i++) {
+            String column = meta.getColumnName(i).toLowerCase(Locale.ROOT);
+            StringBuilder key = new StringBuilder();
+            boolean uppercase = false;
+            for (char c : column.toCharArray()) {
+                if (c == '_') { uppercase = true; }
+                else { key.append(uppercase ? Character.toUpperCase(c) : c); uppercase = false; }
             }
-            return row;
-        });
+            Object value = rs.getObject(i);
+            row.put(key.toString(), value instanceof Date date ? date.toLocalDate().toString() : value);
+        }
+        return row;
     }
 
     public long count(Catalog catalog) {
@@ -59,7 +68,7 @@ public class CatalogRepository {
         String columns = String.join(", ", fields.keySet());
         String values = fields.keySet().stream().map(k -> ":" + k).collect(Collectors.joining(", "));
         var keys = new GeneratedKeyHolder();
-        jdbc.update("INSERT INTO " + catalog.table + " (" + columns + ") VALUES (" + values + ")", params, keys, new String[]{"ID"});
+        jdbc.update("INSERT INTO " + catalog.table + " (" + columns + ") VALUES (" + values + ")", params, keys, new String[]{"id"});
         return Objects.requireNonNull(keys.getKey()).longValue();
     }
 

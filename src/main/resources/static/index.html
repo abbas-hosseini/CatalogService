@@ -37,6 +37,22 @@
     <div class="dialog-footer"><button class="button danger" id="confirm-delete">حذف رکورد</button><button class="button secondary" data-close="delete-dialog">انصراف</button></div>
   </dialog>
   <dialog id="profile-dialog" class="profile-dialog" aria-labelledby="profile-title"><div class="dialog-header"><div><div class="eyebrow">پرونده کارمند</div><h2 id="profile-title"></h2></div><button class="icon-button" data-close="profile-dialog" aria-label="بستن پرونده">×</button></div><div class="dialog-body" id="profile-content"></div></dialog>
+  <dialog id="score-sheet-dialog" class="score-sheet-dialog" aria-labelledby="score-sheet-title">
+    <div class="dialog-header"><div><div class="eyebrow">ارزشیابی کارکنان</div><h2 id="score-sheet-title">ورود نمرات شایستگی</h2></div><button type="button" class="icon-button" data-close="score-sheet-dialog" aria-label="بستن جدول نمرات">×</button></div>
+    <form id="score-sheet-form" novalidate>
+      <div class="dialog-body">
+        <div class="field score-sheet-employee"><label for="score-sheet-employee">کارمند</label><select id="score-sheet-employee" required></select></div>
+        <p id="score-sheet-hint" class="form-hint">نمرهٔ هر شایستگی را از ۰ تا ۱۰۰ وارد کنید. با Enter یا Tab به خانهٔ بعد بروید. تاریخ نمرات جدید یا تغییرکرده، امروز ثبت می‌شود.</p>
+        <div id="score-sheet-error" class="alert error" role="alert" hidden></div>
+        <div class="data-panel">
+          <div class="toolbar"><label class="search-box"><input id="score-sheet-search" type="search" placeholder="جست‌وجوی شایستگی یا کد…" aria-label="جست‌وجوی شایستگی در جدول نمرات"></label><span id="score-sheet-progress" class="record-count" role="status"></span></div>
+          <div id="score-sheet-table"></div>
+        </div>
+        <p class="score-sheet-note">خانهٔ خالی یعنی بدون نمره؛ با پاک‌کردن نمرهٔ قبلی و ذخیره، آن نمره حذف می‌شود. نمرهٔ صفر با خانهٔ خالی متفاوت است.</p>
+      </div>
+      <div class="dialog-footer"><button type="submit" class="button primary" id="score-sheet-save">ذخیره نمرات</button><button type="button" class="button secondary" data-close="score-sheet-dialog">انصراف</button></div>
+    </form>
+  </dialog>
   <div id="toast" class="toast" role="status" hidden></div>
 </body>
 </html>

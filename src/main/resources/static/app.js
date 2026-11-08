@@ -1,6 +1,7 @@
 'use strict';
 
 const paths = {
+  companies: '<path d="M4 21V3h12v18M16 9h4v12M2 21h20M8 7h4M8 11h4M8 15h4M9 21v-3h2v3"/>',
   dashboard: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
   factors: '<path d="m12 3 3 5 6 1-4 5 1 7-6-3-6 3 1-7-4-5 6-1z"/>',
   jobs: '<rect x="8" y="3" width="8" height="5" rx="1"/><rect x="2" y="16" width="6" height="5" rx="1"/><rect x="16" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M5 16v-4h14v4"/>',
@@ -28,17 +29,23 @@ const notesField = field('notes','یادداشت','textarea',{max:2000});
 const refField = (name,label,ref,required=true) => field(name,label,'select',{ref,required});
 const scoreField = (name,label,required=true) => field(name,label,'decimal',{required,min:0,max:100,placeholder:'عددی بین ۰ تا ۱۰۰'});
 const dateField = (name,label) => field(name,label,'date',{required:true});
+const educationLevels = {
+  BELOW_DIPLOMA:'زیر دیپلم', DIPLOMA:'دیپلم', ASSOCIATE:'فوق دیپلم', BACHELOR:'لیسانس', DOCTORATE:'دکتری'
+};
+const educationLabel = value => Object.hasOwn(educationLevels,value) ? educationLevels[value] : 'ثبت نشده';
 
 const sections = {
   factors: {title:'عوامل ارزشیابی',singular:'عامل ارزشیابی',description:'شایستگی‌ها و شاخص‌های ارزیابی را در یک ساختار سلسله‌مراتبی تعریف کنید.',tree:true,fields:[codeField,titleField,refField('parentId','عامل بالادست','factors',false),descriptionField],columns:[['code','کد عامل'],['title','عنوان عامل'],['parentId','عامل بالادست','factors'],['description','توضیحات']]},
   jobs: {title:'ساختار مشاغل',singular:'شغل',description:'مشاغل سازمان و ارتباط هر شغل با شغل بالادست را مدیریت کنید.',tree:true,fields:[codeField,titleField,refField('parentId','شغل بالادست','jobs',false),descriptionField],columns:[['code','کد شغل'],['title','عنوان شغل'],['parentId','شغل بالادست','jobs'],['description','توضیحات']]},
-  employees: {title:'کارمندان',singular:'کارمند',description:'مشخصات کارکنان، شغل فعلی و پرونده شایستگی و آموزش آن‌ها را ثبت کنید.',fields:[field('personnelCode','کد پرسنلی','text',{required:true,max:40}),field('firstName','نام','text',{required:true,max:80}),field('lastName','نام خانوادگی','text',{required:true,max:80}),refField('jobId','شغل فعلی','jobs',false),descriptionField],columns:[['personnelCode','کد پرسنلی'],['fullName','نام و نام خانوادگی'],['jobId','شغل فعلی','jobs']]},
+  companies: {title:'شرکت‌ها',singular:'شرکت',description:'شرکت‌ها را تعریف کنید و سمت کارکنان در هر شرکت را از پروندهٔ کارمند ثبت کنید.',fields:[codeField,field('title','نام شرکت','text',{required:true,max:160}),descriptionField],columns:[['code','کد شرکت'],['title','نام شرکت'],['description','توضیحات']]},
+  employees: {title:'کارمندان',singular:'کارمند',description:'مشخصات کارکنان را ثبت کنید؛ سمت‌های هر فرد در شرکت‌ها، شایستگی‌ها و آموزش‌ها در پروندهٔ او قرار دارند.',fields:[field('personnelCode','کد پرسنلی','text',{required:true,max:40}),field('firstName','نام','text',{required:true,max:80}),field('lastName','نام خانوادگی','text',{required:true,max:80}),field('educationLevel','مدرک تحصیلی','choice',{choices:educationLevels}),field('startDate','تاریخ شروع به کار (میلادی)','date',{allowFuture:true}),descriptionField],columns:[['personnelCode','کد پرسنلی'],['fullName','نام و نام خانوادگی'],['positions','شرکت و سمت'],['educationLevel','مدرک تحصیلی'],['startDate','تاریخ شروع به کار']]},
+  positions: {title:'سمت‌ها در شرکت‌ها',singular:'سمت',fields:[refField('companyId','شرکت','companies'),refField('jobId','سمت / شغل','jobs'),notesField],columns:[['companyId','شرکت','companies'],['jobId','سمت / شغل','jobs'],['notes','یادداشت']]},
   courses: {title:'دوره‌های آموزشی',singular:'دوره آموزشی',description:'فهرست دوره‌ها، برگزارکنندگان و مدت آموزش را تعریف کنید.',fields:[codeField,titleField,field('provider','برگزارکننده','text',{max:160}),field('durationHours','مدت دوره (ساعت)','decimal',{required:true,min:0.01,max:10000}),descriptionField],columns:[['code','کد دوره'],['title','عنوان دوره'],['provider','برگزارکننده'],['durationHours','مدت (ساعت)']]},
   trainings: {title:'سوابق آموزشی',singular:'سابقه آموزشی',description:'دوره‌های گذرانده‌شده را همراه با تاریخ پایان و گواهی در پرونده کارمند ثبت کنید.',filter:'employeeId',filterRef:'employees',fields:[refField('employeeId','کارمند','employees'),refField('courseId','دوره آموزشی','courses'),dateField('completionDate','تاریخ پایان (میلادی)'),scoreField('score','نمره دوره',false),field('certificateNumber','شماره گواهی','text',{max:100}),notesField],columns:[['employeeId','کارمند','employees'],['courseId','دوره آموزشی','courses'],['completionDate','تاریخ پایان'],['score','نمره'],['certificateNumber','شماره گواهی']]},
   scores: {title:'نمرات شایستگی',singular:'نمره شایستگی',description:'نمره جاری هر کارمند را برای عوامل ارزشیابی، به‌صورت دستی از ۱۰۰ ثبت کنید.',filter:'employeeId',filterRef:'employees',fields:[refField('employeeId','کارمند','employees'),refField('factorId','عامل ارزشیابی','factors'),scoreField('score','نمره شایستگی'),dateField('assessedOn','تاریخ ارزشیابی (میلادی)'),notesField],columns:[['employeeId','کارمند','employees'],['factorId','عامل ارزشیابی','factors'],['score','نمره از ۱۰۰'],['assessedOn','تاریخ ارزشیابی']]},
   requirements: {title:'شرایط احراز شغل',singular:'شرط احراز',fields:[refField('factorId','عامل ارزشیابی','factors'),scoreField('minimumScore','حداقل نمره لازم'),notesField],columns:[['factorId','عامل ارزشیابی','factors'],['minimumScore','حداقل نمره از ۱۰۰'],['notes','یادداشت']]}
 };
-const state = {section:'dashboard',data:{},search:'',filter:'',page:1,pageSize:12,editing:null,deleting:null,jobId:null,ready:false,busy:false};
+const state = {section:'dashboard',data:{},search:'',filter:'',page:1,pageSize:12,editing:null,deleting:null,jobId:null,profileId:null,scoreSheet:null,ready:false,busy:false};
 const $ = id => document.getElementById(id);
 let toastTimer;
 
@@ -51,8 +58,12 @@ function label(resource,id) {
   return r ? (resource==='employees' ? `${r.firstName} ${r.lastName}` : r.title) : '';
 }
 function recordLabel(section,r) {
+  if(section==='positions')return `${companyLabel(r.companyId)} / ${label('jobs',r.jobId)}`;
   return section==='employees' ? `${r.firstName} ${r.lastName}` : r.title || `${label('employees',r.employeeId)||label('jobs',r.jobId)} / ${label('factors',r.factorId)||label('courses',r.courseId)}`;
 }
+const companyLabel = id => label('companies',id)||'شرکت مشخص نشده';
+const employeePositions = id => (state.data.positions||[]).filter(row=>row.employeeId===id);
+const positionLabel = row => `${companyLabel(row.companyId)} — ${label('jobs',row.jobId)}`;
 async function api(resource, options={}) {
   let response;
   try { response=await fetch(`/api/${resource}`,{headers:{'Content-Type':'application/json'},...options}); }
@@ -68,17 +79,18 @@ async function loadData() {
 }
 function renderNavigation() {
   const link=(key,title)=>`<a href="#${key}" class="nav-link ${state.section===key?'active':''}" ${state.section===key?'aria-current="page"':''}>${icon(key)}<span>${title}</span></a>`;
-  $('navigation').innerHTML=link('dashboard','نمای کلی')+'<div class="nav-heading">اطلاعات پایه</div>'+['factors','jobs','employees','courses'].map(k=>link(k,sections[k].title)).join('')+'<div class="nav-heading">پرونده کارکنان</div>'+['scores','trainings'].map(k=>link(k,sections[k].title)).join('');
+  $('navigation').innerHTML=link('dashboard','نمای کلی')+'<div class="nav-heading">اطلاعات پایه</div>'+['companies','factors','jobs','employees','courses'].map(k=>link(k,sections[k].title)).join('')+'<div class="nav-heading">پرونده کارکنان</div>'+['scores','trainings'].map(k=>link(k,sections[k].title)).join('');
 }
 function render() {
   if(state.ready && $('job-dialog').open) renderJobRequirements();
+  if(state.ready && $('profile-dialog').open) openProfile(state.profileId);
   renderNavigation();
   const config=sections[state.section];
   $('page-title').textContent=config?.title||'نمای کلی'; $('breadcrumb').textContent=config?.title||'نمای کلی';
   $('page-description').textContent=config?.description||'اطلاعات کارکنان و شرایط احراز مشاغل، در یک فضای یکپارچه.';
   $('eyebrow').textContent=config?'مدیریت اطلاعات سازمان':'سرمایه انسانی سازمان';
   $('add-button').hidden=!config||!state.ready;
-  if(config) $('add-button').innerHTML=icon('plus')+`ثبت ${config.singular}`;
+  if(config) $('add-button').innerHTML=icon('plus')+(state.section==='scores'?'ورود جدولی نمرات':`ثبت ${config.singular}`);
   if(!state.ready) {
     $('page-content').innerHTML='<div class="loading">دریافت اطلاعات انجام نشد. <button class="button secondary" id="retry-load">تلاش دوباره</button></div>';
     $('retry-load').onclick=initialize; return;
@@ -109,10 +121,16 @@ function treeRows(resource) {
 }
 function cell(config,column,row) {
   const [key,,ref]=column,value=row[key];
+  if(key==='positions'){
+    const positions=employeePositions(row.id);
+    return positions.length?`<div class="employee-position-list">${positions.map(position=>`<span>${escapeHtml(positionLabel(position))}</span>`).join('')}</div>`:'<span class="badge gray">بدون سمت</span>';
+  }
+  if(key==='companyId'&&value==null)return '<span class="badge gray">شرکت مشخص نشده</span>';
   if(ref) { const text=label(ref,value);return text?escapeHtml(text):`<span class="badge gray">${key==='jobId'?'بدون شغل':key==='parentId'?'سطح اصلی':'—'}</span>`; }
   if(key==='fullName')return escapeHtml(`${row.firstName} ${row.lastName}`);
   if(key==='score'||key==='minimumScore')return value==null?'<span class="muted">—</span>':`<span class="score-cell"><strong>${number(value)}</strong><span class="score-track"><span class="score-fill" style="--score:${Number(value)}%"></span></span></span>`;
-  if(key==='assessedOn'||key==='completionDate')return date(value);
+  if(key==='assessedOn'||key==='completionDate'||key==='startDate')return date(value);
+  if(key==='educationLevel')return escapeHtml(educationLabel(value));
   if(key==='durationHours')return number(value);
   if(key==='code'||key==='personnelCode')return `<span class="code">${escapeHtml(value)}</span>`;
   if(config.tree&&key==='title')return `<span class="tree-name" style="--depth:${row.depth||0}">${row.depth?'<span class="tree-line"></span>':''}${icon('folder')}${escapeHtml(value)}</span>`;
@@ -125,7 +143,7 @@ function renderTable() {
   if(state.filter)rows=rows.filter(r=>String(r[config.filter])===state.filter);
   if(state.search.trim()) {
     const query=normalizeSearch(state.search.trim());
-    rows=rows.filter(r=>normalizeSearch(config.columns.map(([k,,ref])=>ref?label(ref,r[k]):k==='fullName'?`${r.firstName} ${r.lastName}`:r[k]).join(' ')).includes(query));
+    rows=rows.filter(r=>normalizeSearch(config.columns.map(([k,,ref])=>ref?label(ref,r[k]):k==='positions'?employeePositions(r.id).map(positionLabel).join(' '):k==='fullName'?`${r.firstName} ${r.lastName}`:k==='educationLevel'?educationLabel(r[k]):k==='startDate'?`${r[k]||''} ${date(r[k])}`:r[k]).join(' ')).includes(query));
   }
   $('record-count').textContent=`${number(rows.length)} رکورد`;
   if(!rows.length) {
@@ -153,26 +171,33 @@ function options(resource,selected,excluded=new Set()) {
 }
 function openForm(record=null,section=state.section,prefill={}) {
   if(state.busy)return;
+  if(section==='scores')return openScoreSheet(record?.employeeId??prefill.employeeId??(state.section==='scores'&&state.filter?Number(state.filter):null));
   const jobId=section==='requirements' ? record?.jobId??prefill.jobId : null;
+  const employeeId=section==='positions' ? record?.employeeId??prefill.employeeId : null;
+  if(section==='positions' && !state.data.employees.some(employee=>employee.id===employeeId)) {
+    toast('ابتدا پروندهٔ کارمند موردنظر را باز کنید.');return;
+  }
   if(section==='requirements' && !state.data.jobs.some(job=>job.id===jobId)) {
     toast('ابتدا شغل موردنظر را از فهرست مشاغل انتخاب کنید.');return;
   }
-  const config=sections[section];state.editing={section,id:record?.id??null,jobId};
+  const config=sections[section];state.editing={section,id:record?.id??null,jobId,employeeId};
   const values=record||{...prefill};
   if(!record&&section===state.section&&config.filter&&state.filter&&!values[config.filter])values[config.filter]=Number(state.filter);
   $('dialog-title').textContent=`${record?'ویرایش':'ثبت'} ${config.singular}`;
-  $('form-context').hidden=section!=='requirements';
-  $('form-context').textContent=section==='requirements'?`شغل: ${label('jobs',jobId)}`:'';
+  $('form-context').hidden=!['requirements','positions'].includes(section);
+  $('form-context').textContent=section==='requirements'?`شغل: ${label('jobs',jobId)}`:section==='positions'?`کارمند: ${label('employees',employeeId)}`:'';
   $('form-error').hidden=true;
   $('form-hint').textContent='فیلدهای ستاره‌دار الزامی هستند.'+(config.fields.some(f=>f.type==='date')?' تاریخ را به میلادی وارد کنید؛ در فهرست، تاریخ شمسی نمایش داده می‌شود.':'');
+  if(section==='employees')$('form-hint').textContent+=' سمت‌ها در شرکت‌ها را پس از ذخیره، از پروندهٔ کارمند ثبت و ویرایش کنید.';
   $('form-fields').innerHTML=config.fields.map(f=>{
-    const val=values[f.name]??(f.type==='date'?today():'');
+    const val=values[f.name]??(f.type==='date'&&f.required?today():'');
     const attrs=`id="field-${f.name}" name="${f.name}" ${f.required?'required':''} aria-describedby="error-${f.name}"`;
     let input;
     if(f.type==='select')input=`<select ${attrs}><option value="">${f.required?'انتخاب کنید…':f.name==='parentId'?'بدون بالادست (سطح اصلی)':'بدون شغل'}</option>${options(f.ref,val,f.name==='parentId'?excludedDescendants(section,record?.id):new Set())}</select>`;
+    else if(f.type==='choice')input=`<select ${attrs}><option value="">ثبت نشده</option>${Object.entries(f.choices).map(([value,title])=>`<option value="${escapeHtml(value)}" ${value===val?'selected':''}>${escapeHtml(title)}</option>`).join('')}</select>`;
     else if(f.type==='textarea')input=`<textarea ${attrs} maxlength="${f.max}">${escapeHtml(val)}</textarea>`;
     else if(f.type==='decimal')input=`<input ${attrs} type="text" inputmode="decimal" dir="ltr" value="${escapeHtml(val)}" placeholder="${escapeHtml(f.placeholder||'مثلاً ۸')}" maxlength="12">`;
-    else input=`<input ${attrs} type="${f.type}" value="${escapeHtml(val)}" ${f.max?`maxlength="${f.max}"`:''} ${f.type==='date'?`max="${today()}" dir="ltr"`:''} placeholder="${escapeHtml(f.placeholder||'')}">`;
+    else input=`<input ${attrs} type="${f.type}" value="${escapeHtml(val)}" ${f.max?`maxlength="${f.max}"`:''} ${f.type==='date'?`${f.allowFuture?'':`max="${today()}"`} dir="ltr"`:''} placeholder="${escapeHtml(f.placeholder||'')}">`;
     const needsReference=f.type==='select'&&f.required&&!state.data[f.ref].length;
     return `<div class="field ${f.type==='textarea'?'full':''}"><label for="field-${f.name}">${f.label}${f.required?'<span class="required">*</span>':''}</label>${input}${needsReference?`<span class="field-help">ابتدا در بخش «${sections[f.ref].title}» اطلاعات ثبت کنید.</span>`:''}<span class="field-error" id="error-${f.name}"></span></div>`;
   }).join('');
@@ -187,7 +212,7 @@ async function saveForm(event) {
   $('form-error').hidden=true;
   $('record-form').querySelectorAll('[aria-invalid]').forEach(i=>i.removeAttribute('aria-invalid'));
   $('record-form').querySelectorAll('.field-error').forEach(i=>i.textContent='');
-  const {section,id,jobId}=state.editing,payload=section==='requirements'?{jobId}:{};let invalid=false;
+  const {section,id,jobId,employeeId}=state.editing,payload=section==='requirements'?{jobId}:section==='positions'?{employeeId}:{};let invalid=false;
   for(const f of sections[section].fields){
     const value=$(`field-${f.name}`).value.trim();
     if(f.required&&!value){fieldError(f.name,'تکمیل این فیلد الزامی است.');invalid=true;}
@@ -227,14 +252,129 @@ async function confirmDelete(){
   finally{state.busy=false;$('confirm-delete').disabled=false;}
 }
 function openProfile(id){
-  const employee=state.data.employees.find(e=>e.id===id);$('profile-title').textContent=`${employee.firstName} ${employee.lastName}`;
+  const employee=state.data.employees.find(e=>e.id===id);
+  if(!employee){$('profile-dialog').close();return;}
+  state.profileId=id;$('profile-title').textContent=`${employee.firstName} ${employee.lastName}`;
   const miniTable=key=>{
     const config=sections[key],rows=state.data[key].filter(r=>r.employeeId===id),columns=config.columns.filter(c=>c[0]!=='employeeId');
     return rows.length?`<div class="data-panel table-wrap"><table><thead><tr>${columns.map(c=>`<th>${c[1]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${columns.map(c=>`<td>${cell(config,c,r)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<p class="muted">هنوز اطلاعاتی ثبت نشده است.</p>';
   };
-  $('profile-content').innerHTML=`<div class="profile-summary"><div><small>کد پرسنلی</small>${escapeHtml(employee.personnelCode)}</div><div><small>شغل فعلی</small>${escapeHtml(label('jobs',employee.jobId)||'بدون شغل')}</div><div><small>سوابق آموزشی</small>${number(state.data.trainings.filter(t=>t.employeeId===id).length)} دوره</div></div>${employee.description?`<p class="muted profile-note">${escapeHtml(employee.description)}</p>`:''}${['scores','trainings'].map(key=>`<section class="profile-section"><div class="section-heading"><h3>${sections[key].title}</h3><button class="button secondary" data-profile-add="${key}">${icon('plus')}ثبت ${sections[key].singular}</button></div>${miniTable(key)}</section>`).join('')}`;
-  $('profile-content').querySelectorAll('[data-profile-add]').forEach(b=>b.onclick=()=>{$('profile-dialog').close();openForm(null,b.dataset.profileAdd,{employeeId:id});});
-  $('profile-dialog').showModal();
+  $('profile-content').innerHTML=`<div class="profile-summary"><div><small>کد پرسنلی</small>${escapeHtml(employee.personnelCode)}</div><div><small>شغل فعلی</small>${escapeHtml(label('jobs',employee.jobId)||'بدون شغل')}</div><div><small>مدرک تحصیلی</small>${escapeHtml(educationLabel(employee.educationLevel))}</div><div><small>تاریخ شروع به کار</small>${date(employee.startDate)}</div><div><small>سوابق آموزشی</small>${number(state.data.trainings.filter(t=>t.employeeId===id).length)} دوره</div></div>${employee.description?`<p class="muted profile-note">${escapeHtml(employee.description)}</p>`:''}${['scores','trainings'].map(key=>`<section class="profile-section"><div class="section-heading"><h3>${sections[key].title}</h3><button class="button secondary" data-profile-add="${key}">${icon('plus')}ثبت ${sections[key].singular}</button></div>${miniTable(key)}</section>`).join('')}`;
+  $('profile-content').querySelectorAll('[data-profile-add]').forEach(b=>{
+    if(b.dataset.profileAdd==='scores'){
+      b.textContent='ورود و ویرایش نمرات';b.onclick=()=>openScoreSheet(id,true);
+    }else b.onclick=()=>{$('profile-dialog').close();openForm(null,b.dataset.profileAdd,{employeeId:id});};
+  });
+  if(!$('profile-dialog').open)$('profile-dialog').showModal();
+}
+
+function openScoreSheet(employeeId=null,locked=false){
+  if(state.busy)return;
+  state.scoreSheet={employeeId:null,locked,rows:[]};
+  $('score-sheet-employee').innerHTML='<option value="">انتخاب کارمند…</option>'+options('employees',employeeId);
+  $('score-sheet-form').querySelectorAll('input,select,button').forEach(input=>input.disabled=false);
+  $('score-sheet-employee').disabled=locked;
+  selectScoreSheetEmployee(employeeId);
+  $('score-sheet-dialog').showModal();
+}
+function selectScoreSheetEmployee(employeeId){
+  const sheet=state.scoreSheet;
+  sheet.employeeId=state.data.employees.some(row=>row.id===Number(employeeId))?Number(employeeId):null;
+  $('score-sheet-employee').value=sheet.employeeId??'';
+  const scores=new Map(state.data.scores.filter(row=>row.employeeId===sheet.employeeId).map(row=>[row.factorId,row.score]));
+  sheet.rows=sheet.employeeId?treeRows('factors').map(factor=>({...factor,original:scores.get(factor.id)??null,value:String(scores.get(factor.id)??'')})):[];
+  $('score-sheet-error').hidden=true;$('score-sheet-search').value='';
+  $('score-sheet-search').disabled=!sheet.rows.length;
+  if(!sheet.rows.length){
+    const message=!state.data.employees.length?'ابتدا یک کارمند ثبت کنید.':!sheet.employeeId?'برای مشاهدهٔ همهٔ شایستگی‌ها، کارمند را انتخاب کنید.':'هنوز عامل ارزشیابی تعریف نشده است. ابتدا عوامل را ثبت کنید.';
+    $('score-sheet-table').innerHTML=`<div class="empty-state"><p>${message}</p></div>`;
+  }else{
+    $('score-sheet-table').innerHTML=`<div class="table-wrap"><table class="score-sheet-table"><thead><tr><th scope="col">کد</th><th scope="col">شایستگی</th><th scope="col">نمره از ۱۰۰</th></tr></thead><tbody>${sheet.rows.map(row=>`<tr data-score-row="${row.id}"><td><span class="code">${escapeHtml(row.code)}</span></td><td><label class="tree-name" style="--depth:${row.depth}" for="sheet-score-${row.id}">${row.depth?'<span class="tree-line"></span>':''}${escapeHtml(row.title)}</label></td><td><div class="field"><input id="sheet-score-${row.id}" data-score-factor="${row.id}" type="text" inputmode="decimal" dir="ltr" maxlength="12" autocomplete="off" value="${escapeHtml(row.value)}" placeholder="—" aria-label="نمره ${escapeHtml(row.title)} (${escapeHtml(row.code)})" aria-describedby="score-sheet-hint sheet-error-${row.id}"><span class="field-error" id="sheet-error-${row.id}"></span></div></td></tr>`).join('')}</tbody></table></div><p id="score-sheet-no-results" class="score-sheet-note" hidden>شایستگی مطابق جست‌وجو پیدا نشد.</p>`;
+    $('score-sheet-table').querySelectorAll('[data-score-factor]').forEach(input=>{
+      const row=sheet.rows.find(item=>item.id===Number(input.dataset.scoreFactor));
+      input.addEventListener('input',()=>{
+        row.value=input.value;input.removeAttribute('aria-invalid');$(`sheet-error-${row.id}`).textContent='';
+        input.closest('tr').classList.toggle('score-changed',scoreRowChanged(row));updateScoreSheetStatus();
+      });
+      input.addEventListener('keydown',event=>{
+        if(event.isComposing||!['Enter','ArrowDown','ArrowUp'].includes(event.key))return;
+        event.preventDefault();
+        const inputs=[...$('score-sheet-table').querySelectorAll('tr:not([hidden]) [data-score-factor]')];
+        const offset=event.key==='ArrowUp'||(event.key==='Enter'&&event.shiftKey)?-1:1;
+        const next=inputs[inputs.indexOf(input)+offset];
+        if(next){next.focus();next.select();}else if(offset>0)$('score-sheet-save').focus();
+      });
+    });
+  }
+  updateScoreSheetStatus();
+}
+function scoreRowChanged(row){
+  const value=normalizeDigits(row.value).trim();
+  if(value!==''&&!/^\d+(\.\d{1,2})?$/.test(value))return true;
+  return value===''?row.original!==null:row.original===null||Number(value)!==row.original;
+}
+function updateScoreSheetStatus(){
+  const sheet=state.scoreSheet;if(!sheet)return;
+  const filled=sheet.rows.filter(row=>row.value.trim()!=='').length,changed=sheet.rows.filter(scoreRowChanged).length;
+  $('score-sheet-progress').textContent=sheet.employeeId?`${number(filled)} از ${number(sheet.rows.length)} شایستگی دارای نمره${changed?` · ${number(changed)} تغییر ذخیره‌نشده`:''}`:'';
+  $('score-sheet-save').disabled=state.busy||!sheet.employeeId||!changed;
+  $('score-sheet-save').textContent=state.busy?'در حال ذخیره…':'ذخیره نمرات';
+}
+function filterScoreSheet(){
+  const query=normalizeSearch($('score-sheet-search').value.trim());let visible=0;
+  for(const row of state.scoreSheet?.rows||[]){
+    const element=$(`sheet-score-${row.id}`).closest('tr');
+    element.hidden=!normalizeSearch(`${row.code} ${row.title}`).includes(query);
+    if(!element.hidden)visible++;
+  }
+  if($('score-sheet-no-results'))$('score-sheet-no-results').hidden=visible>0;
+}
+function scoreSheetCanDiscard(){
+  return !state.busy&&(!state.scoreSheet?.rows.some(scoreRowChanged)||window.confirm('تغییرات نمرات هنوز ذخیره نشده‌اند. تغییرات کنار گذاشته شوند؟'));
+}
+function scoreSheetFieldError(factorId,message){
+  const input=$(`sheet-score-${factorId}`);if(!input)return;
+  input.setAttribute('aria-invalid','true');$(`sheet-error-${factorId}`).textContent=message;
+}
+function focusScoreSheetError(){
+  const input=$('score-sheet-form').querySelector('[aria-invalid]');
+  if(input){$('score-sheet-search').value='';filterScoreSheet();input.focus();}
+}
+async function saveScoreSheet(event){
+  event.preventDefault();if(state.busy||!state.scoreSheet?.employeeId)return;
+  const sheet=state.scoreSheet,changes=sheet.rows.filter(scoreRowChanged);let invalid=false;
+  $('score-sheet-error').hidden=true;
+  $('score-sheet-form').querySelectorAll('[aria-invalid]').forEach(input=>input.removeAttribute('aria-invalid'));
+  $('score-sheet-form').querySelectorAll('.field-error').forEach(element=>element.textContent='');
+  // Validate all rows, including rows hidden by the search filter.
+  for(const row of sheet.rows){
+    const value=normalizeDigits(row.value).trim();
+    if(value!==''&&(!/^\d+(\.\d{1,2})?$/.test(value)||!Number.isFinite(Number(value))||Number(value)>100)){
+      scoreSheetFieldError(row.id,'عددی بین ۰ تا ۱۰۰ با حداکثر دو رقم اعشار وارد کنید.');invalid=true;
+    }
+  }
+  if(invalid){focusScoreSheetError();return;}
+  if(!changes.length)return;
+  const scores=changes.map(row=>({factorId:row.id,score:row.value.trim()===''?null:Number(normalizeDigits(row.value).trim())}));
+  state.busy=true;
+  $('score-sheet-form').querySelectorAll('input,select,button').forEach(input=>input.disabled=true);updateScoreSheetStatus();
+  try{
+    const saved=await api(`employees/${sheet.employeeId}/scores`,{method:'PUT',body:JSON.stringify({scores})});
+    state.data.scores=[...state.data.scores.filter(row=>row.employeeId!==sheet.employeeId),...saved].sort((a,b)=>b.id-a.id);
+    state.scoreSheet=null;$('score-sheet-dialog').close();render();toast('نمرات شایستگی با موفقیت ذخیره شد.');
+  }catch(error){
+    $('score-sheet-error').textContent=error.message;$('score-sheet-error').hidden=false;
+    for(const [key,message]of Object.entries(error.fields||{})){
+      const index=key.match(/^scores\[(\d+)\]/)?.[1];
+      if(index!==undefined&&changes[index])scoreSheetFieldError(changes[index].id,message);
+    }
+  }finally{
+    state.busy=false;
+    if(state.scoreSheet){
+      $('score-sheet-form').querySelectorAll('input,select,button').forEach(input=>input.disabled=false);
+      $('score-sheet-employee').disabled=sheet.locked;updateScoreSheetStatus();focusScoreSheetError();
+    }
+  }
 }
 function openJobRequirements(id){
   if(state.busy)return;
@@ -270,8 +410,20 @@ function navigate(){
 async function initialize(){try{await loadData();navigate();}catch(error){showLoadError(error.message);render();}}
 $('today').textContent=new Intl.DateTimeFormat('fa-IR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
 $('add-button').onclick=()=>openForm();$('record-form').addEventListener('submit',saveForm);$('confirm-delete').onclick=confirmDelete;
+$('score-sheet-form').addEventListener('submit',saveScoreSheet);
+$('score-sheet-search').addEventListener('input',filterScoreSheet);
+$('score-sheet-employee').addEventListener('change',event=>{
+  if(!scoreSheetCanDiscard()){$('score-sheet-employee').value=state.scoreSheet.employeeId??'';return;}
+  selectScoreSheetEmployee(Number(event.target.value)||null);
+});
+$('score-sheet-dialog').addEventListener('close',()=>{if(!$('score-sheet-dialog').open)state.scoreSheet=null;});
 document.querySelectorAll('.close-dialog').forEach(b=>b.onclick=()=>{if(!state.busy)$('record-dialog').close();});
-document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>{if(!state.busy)$(b.dataset.close).close();});
-document.querySelectorAll('dialog').forEach(d=>d.addEventListener('cancel',e=>{if(state.busy)e.preventDefault();}));
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>{
+  if(state.busy||(b.dataset.close==='score-sheet-dialog'&&!scoreSheetCanDiscard()))return;
+  $(b.dataset.close).close();
+});
+document.querySelectorAll('dialog').forEach(d=>d.addEventListener('cancel',e=>{
+  if(state.busy||(d.id==='score-sheet-dialog'&&!scoreSheetCanDiscard()))e.preventDefault();
+}));
 window.addEventListener('hashchange',navigate);
 initialize();

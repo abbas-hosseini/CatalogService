@@ -6,7 +6,9 @@ import java.util.Arrays;
 public enum Catalog {
     FACTORS("factors", "evaluation_factors"),
     JOBS("jobs", "jobs"),
+    COMPANIES("companies", "companies"),
     EMPLOYEES("employees", "employees"),
+    POSITIONS("positions", "employee_positions"),
     COURSES("courses", "courses"),
     TRAININGS("trainings", "employee_trainings"),
     SCORES("scores", "employee_scores"),

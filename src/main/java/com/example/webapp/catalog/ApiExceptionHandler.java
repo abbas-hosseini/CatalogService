@@ -22,6 +22,7 @@ public class ApiExceptionHandler {
             case "Digits" -> "حداکثر دو رقم اعشار مجاز است.";
             case "PastOrPresent" -> "تاریخ نمی‌تواند در آینده باشد.";
             case "Size" -> "طول متن بیشتر از حد مجاز است.";
+            case "Pattern" -> error.getField().equals("educationLevel") ? "مدرک تحصیلی را از گزینه‌های موجود انتخاب کنید." : "مقدار واردشده معتبر نیست.";
             default -> "مقدار واردشده معتبر نیست.";
         }));
         return ResponseEntity.badRequest().body(Map.of("message", "لطفاً فیلدهای مشخص‌شده را اصلاح کنید.", "fields", fields));
@@ -29,7 +30,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(DuplicateKeyException.class)
     ResponseEntity<?> duplicate(DuplicateKeyException e) {
-        return ResponseEntity.status(409).body(Map.of("message", "این اطلاعات قبلاً ثبت شده است؛ کدها و ترکیب کارمند/عامل، شغل/عامل یا کارمند/دوره/تاریخ نباید تکراری باشند. برای تغییر، رکورد قبلی را ویرایش کنید."));
+        return ResponseEntity.status(409).body(Map.of("message", "این اطلاعات قبلاً ثبت شده است؛ کدها و ترکیب کارمند/شرکت/شغل، کارمند/عامل، شغل/عامل یا کارمند/دوره/تاریخ نباید تکراری باشند. برای تغییر، رکورد قبلی را ویرایش کنید."));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

@@ -2,7 +2,9 @@ package com.example.webapp.catalog;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
 import java.sql.Date;
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -39,9 +41,25 @@ public class CatalogService {
 
     public long saveEmployee(Long id, Requests.Employee r) {
         requireExisting(Catalog.EMPLOYEES, id);
-        requireReference(Catalog.JOBS, r.jobId());
         return repository.save(Catalog.EMPLOYEES, id, fields("personnel_code", clean(r.personnelCode()),
-            "first_name", clean(r.firstName()), "last_name", clean(r.lastName()), "job_id", r.jobId(), "description", clean(r.description())));
+            "first_name", clean(r.firstName()), "last_name", clean(r.lastName()),
+            "education_level", r.educationLevel(), "start_date", r.startDate() == null ? null : Date.valueOf(r.startDate()),
+            "description", clean(r.description())));
+    }
+
+    public long saveCompany(Long id, Requests.Company r) {
+        requireExisting(Catalog.COMPANIES, id);
+        return repository.save(Catalog.COMPANIES, id, fields("code", clean(r.code()), "title", clean(r.title()),
+            "description", clean(r.description())));
+    }
+
+    public long savePosition(Long id, Requests.EmployeePosition r) {
+        requireExisting(Catalog.POSITIONS, id);
+        requireReference(Catalog.EMPLOYEES, r.employeeId());
+        requireReference(Catalog.COMPANIES, r.companyId());
+        requireReference(Catalog.JOBS, r.jobId());
+        return repository.save(Catalog.POSITIONS, id, fields("employee_id", r.employeeId(),
+            "company_id", r.companyId(), "job_id", r.jobId(), "notes", clean(r.notes())));
     }
 
     public long saveCourse(Long id, Requests.Course r) {
@@ -72,6 +90,34 @@ public class CatalogService {
         requireReference(Catalog.FACTORS, r.factorId());
         return repository.save(Catalog.REQUIREMENTS, id, fields("job_id", r.jobId(), "factor_id", r.factorId(),
             "minimum_score", r.minimumScore(), "notes", clean(r.notes())));
+    }
+
+    public List<Map<String, Object>> saveEmployeeScores(long employeeId, Requests.ScoreSheet request) {
+        requireExisting(Catalog.EMPLOYEES, employeeId);
+        Set<Long> factorIds = new HashSet<>();
+        for (var entry : request.scores()) {
+            if (!factorIds.add(entry.factorId()))
+                throw new CatalogException(400, "هر شایستگی باید فقط یک بار در جدول ارسال شود.");
+            requireReference(Catalog.FACTORS, entry.factorId());
+        }
+        Map<Long, Map<String, Object>> existing = new HashMap<>();
+        for (var row : repository.employeeScores(employeeId))
+            existing.put(((Number) row.get("factorId")).longValue(), row);
+        Date assessedOn = Date.valueOf(LocalDate.now());
+        for (var entry : request.scores()) {
+            var row = existing.get(entry.factorId());
+            Long id = row == null ? null : ((Number) row.get("id")).longValue();
+            if (entry.score() == null) {
+                if (id != null) repository.delete(Catalog.SCORES, id);
+            } else if (id == null) {
+                repository.save(Catalog.SCORES, null, fields("employee_id", employeeId, "factor_id", entry.factorId(),
+                    "score", entry.score(), "assessed_on", assessedOn));
+            } else if (entry.score().compareTo((BigDecimal) row.get("score")) != 0) {
+                // Updating only the score and date preserves any existing assessment notes.
+                repository.save(Catalog.SCORES, id, fields("score", entry.score(), "assessed_on", assessedOn));
+            }
+        }
+        return repository.employeeScores(employeeId);
     }
 
     public void delete(Catalog catalog, long id) {
