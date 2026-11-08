@@ -43,7 +43,7 @@ public class CatalogService {
         requireExisting(Catalog.EMPLOYEES, id);
         return repository.save(Catalog.EMPLOYEES, id, fields("personnel_code", clean(r.personnelCode()),
             "first_name", clean(r.firstName()), "last_name", clean(r.lastName()),
-            "education_level", r.educationLevel(), "start_date", r.startDate() == null ? null : Date.valueOf(r.startDate()),
+            "education_level", r.educationLevel(), "start_date", r.startDate(),
             "description", clean(r.description())));
     }
 

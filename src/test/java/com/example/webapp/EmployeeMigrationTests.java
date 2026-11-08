@@ -19,7 +19,7 @@ class EmployeeMigrationTests {
             statement.executeUpdate("INSERT INTO employees (id, personnel_code, first_name, last_name, job_id, description) "
                 + "VALUES (1, 'E-OLD', 'Existing', 'Employee', 1, 'Preserve this note')");
 
-            Flyway.configure().dataSource(url, "sa", "").load().migrate();
+            Flyway.configure().dataSource(url, "sa", "").target("2").load().migrate();
             try (var row = statement.executeQuery("SELECT * FROM employees WHERE id = 1")) {
                 assertThat(row.next()).isTrue();
                 assertThat(row.getString("personnel_code")).isEqualTo("E-OLD");

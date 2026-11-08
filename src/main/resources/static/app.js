@@ -20,6 +20,8 @@ const number = value => new Intl.NumberFormat('fa-IR', {maximumFractionDigits:2}
 const date = value => value ? new Intl.DateTimeFormat('fa-IR', {year:'numeric',month:'short',day:'numeric'}).format(new Date(`${value}T12:00:00`)) : '—';
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 const normalizeDigits = value => String(value).replace(/[۰-۹]/g,c=>c.charCodeAt(0)-1776).replace(/[٠-٩]/g,c=>c.charCodeAt(0)-1632).replace(/٫/g,'.');
+const jalaliDate = value => value ? String(value).replace(/-/g,'/').replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]) : '—';
+const jalaliDateCell = value => `<span class="jalali-date" dir="ltr">${escapeHtml(jalaliDate(value))}</span>`;
 const normalizeSearch = value => normalizeDigits(value).replace(/ي/g,'ی').replace(/ك/g,'ک').toLowerCase();
 const field = (name,label,type='text',extra={}) => ({name,label,type,...extra});
 const codeField = field('code','کد','text',{required:true,max:40,placeholder:'مثلاً C-001'});
@@ -30,7 +32,7 @@ const refField = (name,label,ref,required=true) => field(name,label,'select',{re
 const scoreField = (name,label,required=true) => field(name,label,'decimal',{required,min:0,max:100,placeholder:'عددی بین ۰ تا ۱۰۰'});
 const dateField = (name,label) => field(name,label,'date',{required:true});
 const educationLevels = {
-  BELOW_DIPLOMA:'زیر دیپلم', DIPLOMA:'دیپلم', ASSOCIATE:'فوق دیپلم', BACHELOR:'لیسانس', DOCTORATE:'دکتری'
+  BELOW_DIPLOMA:'زیر دیپلم', DIPLOMA:'دیپلم', ASSOCIATE:'فوق دیپلم', BACHELOR:'لیسانس', MASTER:'فوق لیسانس', DOCTORATE:'دکتری'
 };
 const educationLabel = value => Object.hasOwn(educationLevels,value) ? educationLevels[value] : 'ثبت نشده';
 
@@ -38,7 +40,7 @@ const sections = {
   factors: {title:'عوامل ارزشیابی',singular:'عامل ارزشیابی',description:'شایستگی‌ها و شاخص‌های ارزیابی را در یک ساختار سلسله‌مراتبی تعریف کنید.',tree:true,fields:[codeField,titleField,refField('parentId','عامل بالادست','factors',false),descriptionField],columns:[['code','کد عامل'],['title','عنوان عامل'],['parentId','عامل بالادست','factors'],['description','توضیحات']]},
   jobs: {title:'ساختار مشاغل',singular:'شغل',description:'مشاغل سازمان و ارتباط هر شغل با شغل بالادست را مدیریت کنید.',tree:true,fields:[codeField,titleField,refField('parentId','شغل بالادست','jobs',false),descriptionField],columns:[['code','کد شغل'],['title','عنوان شغل'],['parentId','شغل بالادست','jobs'],['description','توضیحات']]},
   companies: {title:'شرکت‌ها',singular:'شرکت',description:'شرکت‌ها را تعریف کنید و سمت کارکنان در هر شرکت را از پروندهٔ کارمند ثبت کنید.',fields:[codeField,field('title','نام شرکت','text',{required:true,max:160}),descriptionField],columns:[['code','کد شرکت'],['title','نام شرکت'],['description','توضیحات']]},
-  employees: {title:'کارمندان',singular:'کارمند',description:'مشخصات کارکنان را ثبت کنید؛ سمت‌های هر فرد در شرکت‌ها، شایستگی‌ها و آموزش‌ها در پروندهٔ او قرار دارند.',fields:[field('personnelCode','کد پرسنلی','text',{required:true,max:40}),field('firstName','نام','text',{required:true,max:80}),field('lastName','نام خانوادگی','text',{required:true,max:80}),field('educationLevel','مدرک تحصیلی','choice',{choices:educationLevels}),field('startDate','تاریخ شروع به کار (میلادی)','date',{allowFuture:true}),descriptionField],columns:[['personnelCode','کد پرسنلی'],['fullName','نام و نام خانوادگی'],['positions','شرکت و سمت'],['educationLevel','مدرک تحصیلی'],['startDate','تاریخ شروع به کار']]},
+  employees: {title:'کارمندان',singular:'کارمند',description:'مشخصات کارکنان را ثبت کنید؛ سمت‌های هر فرد در شرکت‌ها، شایستگی‌ها و آموزش‌ها در پروندهٔ او قرار دارند.',fields:[field('personnelCode','کد پرسنلی','text',{required:true,max:40}),field('firstName','نام','text',{required:true,max:80}),field('lastName','نام خانوادگی','text',{required:true,max:80}),field('educationLevel','مدرک تحصیلی','choice',{choices:educationLevels}),field('startDate','تاریخ شروع به کار (شمسی)','jalali'),descriptionField],columns:[['personnelCode','کد پرسنلی'],['fullName','نام و نام خانوادگی'],['positions','شرکت و سمت'],['educationLevel','مدرک تحصیلی'],['startDate','تاریخ شروع به کار (شمسی)']]},
   positions: {title:'سمت‌ها در شرکت‌ها',singular:'سمت',fields:[refField('companyId','شرکت','companies'),refField('jobId','سمت / شغل','jobs'),notesField],columns:[['companyId','شرکت','companies'],['jobId','سمت / شغل','jobs'],['notes','یادداشت']]},
   courses: {title:'دوره‌های آموزشی',singular:'دوره آموزشی',description:'فهرست دوره‌ها، برگزارکنندگان و مدت آموزش را تعریف کنید.',fields:[codeField,titleField,field('provider','برگزارکننده','text',{max:160}),field('durationHours','مدت دوره (ساعت)','decimal',{required:true,min:0.01,max:10000}),descriptionField],columns:[['code','کد دوره'],['title','عنوان دوره'],['provider','برگزارکننده'],['durationHours','مدت (ساعت)']]},
   trainings: {title:'سوابق آموزشی',singular:'سابقه آموزشی',description:'دوره‌های گذرانده‌شده را همراه با تاریخ پایان و گواهی در پرونده کارمند ثبت کنید.',filter:'employeeId',filterRef:'employees',fields:[refField('employeeId','کارمند','employees'),refField('courseId','دوره آموزشی','courses'),dateField('completionDate','تاریخ پایان (میلادی)'),scoreField('score','نمره دوره',false),field('certificateNumber','شماره گواهی','text',{max:100}),notesField],columns:[['employeeId','کارمند','employees'],['courseId','دوره آموزشی','courses'],['completionDate','تاریخ پایان'],['score','نمره'],['certificateNumber','شماره گواهی']]},
@@ -129,7 +131,8 @@ function cell(config,column,row) {
   if(ref) { const text=label(ref,value);return text?escapeHtml(text):`<span class="badge gray">${key==='jobId'?'بدون شغل':key==='parentId'?'سطح اصلی':'—'}</span>`; }
   if(key==='fullName')return escapeHtml(`${row.firstName} ${row.lastName}`);
   if(key==='score'||key==='minimumScore')return value==null?'<span class="muted">—</span>':`<span class="score-cell"><strong>${number(value)}</strong><span class="score-track"><span class="score-fill" style="--score:${Number(value)}%"></span></span></span>`;
-  if(key==='assessedOn'||key==='completionDate'||key==='startDate')return date(value);
+  if(key==='startDate')return jalaliDateCell(value);
+  if(key==='assessedOn'||key==='completionDate')return date(value);
   if(key==='educationLevel')return escapeHtml(educationLabel(value));
   if(key==='durationHours')return number(value);
   if(key==='code'||key==='personnelCode')return `<span class="code">${escapeHtml(value)}</span>`;
@@ -143,7 +146,7 @@ function renderTable() {
   if(state.filter)rows=rows.filter(r=>String(r[config.filter])===state.filter);
   if(state.search.trim()) {
     const query=normalizeSearch(state.search.trim());
-    rows=rows.filter(r=>normalizeSearch(config.columns.map(([k,,ref])=>ref?label(ref,r[k]):k==='positions'?employeePositions(r.id).map(positionLabel).join(' '):k==='fullName'?`${r.firstName} ${r.lastName}`:k==='educationLevel'?educationLabel(r[k]):k==='startDate'?`${r[k]||''} ${date(r[k])}`:r[k]).join(' ')).includes(query));
+    rows=rows.filter(r=>normalizeSearch(config.columns.map(([k,,ref])=>ref?label(ref,r[k]):k==='positions'?employeePositions(r.id).map(positionLabel).join(' '):k==='fullName'?`${r.firstName} ${r.lastName}`:k==='educationLevel'?educationLabel(r[k]):k==='startDate'?`${r[k]||''} ${jalaliDate(r[k])}`:r[k]).join(' ')).includes(query));
   }
   $('record-count').textContent=`${number(rows.length)} رکورد`;
   if(!rows.length) {
@@ -191,11 +194,12 @@ function openForm(record=null,section=state.section,prefill={}) {
   if(section==='employees')$('form-hint').textContent+=' سمت‌ها در شرکت‌ها را پس از ذخیره، از پروندهٔ کارمند ثبت و ویرایش کنید.';
   $('form-fields').innerHTML=config.fields.map(f=>{
     const val=values[f.name]??(f.type==='date'&&f.required?today():'');
-    const attrs=`id="field-${f.name}" name="${f.name}" ${f.required?'required':''} aria-describedby="error-${f.name}"`;
+    const attrs=`id="field-${f.name}" name="${f.name}" ${f.required?'required':''} aria-describedby="error-${f.name}${f.type==='jalali'?` help-${f.name}`:''}"`;
     let input;
     if(f.type==='select')input=`<select ${attrs}><option value="">${f.required?'انتخاب کنید…':f.name==='parentId'?'بدون بالادست (سطح اصلی)':'بدون شغل'}</option>${options(f.ref,val,f.name==='parentId'?excludedDescendants(section,record?.id):new Set())}</select>`;
     else if(f.type==='choice')input=`<select ${attrs}><option value="">ثبت نشده</option>${Object.entries(f.choices).map(([value,title])=>`<option value="${escapeHtml(value)}" ${value===val?'selected':''}>${escapeHtml(title)}</option>`).join('')}</select>`;
     else if(f.type==='textarea')input=`<textarea ${attrs} maxlength="${f.max}">${escapeHtml(val)}</textarea>`;
+    else if(f.type==='jalali')input=`<input ${attrs} type="text" dir="ltr" value="${escapeHtml(val?jalaliDate(val):'')}" placeholder="۱۴۰۳/۰۱/۰۱" maxlength="10"><span class="field-help" id="help-${f.name}">سال/ماه/روز شمسی؛ ارقام فارسی یا انگلیسی پذیرفته می‌شوند.</span>`;
     else if(f.type==='decimal')input=`<input ${attrs} type="text" inputmode="decimal" dir="ltr" value="${escapeHtml(val)}" placeholder="${escapeHtml(f.placeholder||'مثلاً ۸')}" maxlength="12">`;
     else input=`<input ${attrs} type="${f.type}" value="${escapeHtml(val)}" ${f.max?`maxlength="${f.max}"`:''} ${f.type==='date'?`${f.allowFuture?'':`max="${today()}"`} dir="ltr"`:''} placeholder="${escapeHtml(f.placeholder||'')}">`;
     const needsReference=f.type==='select'&&f.required&&!state.data[f.ref].length;
@@ -218,6 +222,12 @@ async function saveForm(event) {
     if(f.required&&!value){fieldError(f.name,'تکمیل این فیلد الزامی است.');invalid=true;}
     if(!value)payload[f.name]=null;
     else if(f.type==='select')payload[f.name]=Number(value);
+    else if(f.type==='jalali'){
+      const parts=normalizeDigits(value).replace(/\//g,'-').match(/^([0-9]{4})-([0-9]{1,2})-([0-9]{1,2})$/);
+      if(!parts||Number(parts[1])<1||Number(parts[1])>1999||Number(parts[2])<1||Number(parts[2])>12||Number(parts[3])<1||Number(parts[3])>(Number(parts[2])<=6?31:30)){
+        fieldError(f.name,'تاریخ شمسی را به صورت ۱۴۰۳/۰۱/۰۱ وارد کنید.');invalid=true;
+      }else payload[f.name]=`${parts[1]}-${parts[2].padStart(2,'0')}-${parts[3].padStart(2,'0')}`;
+    }
     else if(f.type==='decimal'){
       const normalized=normalizeDigits(value),n=Number(normalized);
       if(!/^\d+(\.\d{1,2})?$/.test(normalized)||!Number.isFinite(n)||n<f.min||n>f.max){fieldError(f.name,`عددی بین ${number(f.min)} و ${number(f.max)} با حداکثر دو رقم اعشار وارد کنید.`);invalid=true;}
@@ -255,11 +265,16 @@ function openProfile(id){
   const employee=state.data.employees.find(e=>e.id===id);
   if(!employee){$('profile-dialog').close();return;}
   state.profileId=id;$('profile-title').textContent=`${employee.firstName} ${employee.lastName}`;
+  const positions=employeePositions(id),positionColumns=sections.positions.columns;
+  const positionTable=positions.length?`<div class="data-panel table-wrap"><table><thead><tr>${positionColumns.map(c=>`<th scope="col">${c[1]}</th>`).join('')}<th scope="col">عملیات</th></tr></thead><tbody>${positions.map(row=>`<tr>${positionColumns.map(c=>`<td>${cell(sections.positions,c,row)}</td>`).join('')}<td><div class="row-actions"><button class="text-button" data-position-edit="${row.id}" aria-label="ویرایش سمت ${escapeHtml(positionLabel(row))}">${row.companyId==null?'تعیین شرکت':'ویرایش'}</button><button class="text-button danger-text" data-position-delete="${row.id}" aria-label="حذف سمت ${escapeHtml(positionLabel(row))}">حذف</button></div></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">هنوز سمتی ثبت نشده است. شرکت و شغل این کارمند را با «ثبت سمت» مشخص کنید.</p>';
   const miniTable=key=>{
     const config=sections[key],rows=state.data[key].filter(r=>r.employeeId===id),columns=config.columns.filter(c=>c[0]!=='employeeId');
     return rows.length?`<div class="data-panel table-wrap"><table><thead><tr>${columns.map(c=>`<th>${c[1]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${columns.map(c=>`<td>${cell(config,c,r)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<p class="muted">هنوز اطلاعاتی ثبت نشده است.</p>';
   };
-  $('profile-content').innerHTML=`<div class="profile-summary"><div><small>کد پرسنلی</small>${escapeHtml(employee.personnelCode)}</div><div><small>شغل فعلی</small>${escapeHtml(label('jobs',employee.jobId)||'بدون شغل')}</div><div><small>مدرک تحصیلی</small>${escapeHtml(educationLabel(employee.educationLevel))}</div><div><small>تاریخ شروع به کار</small>${date(employee.startDate)}</div><div><small>سوابق آموزشی</small>${number(state.data.trainings.filter(t=>t.employeeId===id).length)} دوره</div></div>${employee.description?`<p class="muted profile-note">${escapeHtml(employee.description)}</p>`:''}${['scores','trainings'].map(key=>`<section class="profile-section"><div class="section-heading"><h3>${sections[key].title}</h3><button class="button secondary" data-profile-add="${key}">${icon('plus')}ثبت ${sections[key].singular}</button></div>${miniTable(key)}</section>`).join('')}`;
+  $('profile-content').innerHTML=`<div class="profile-summary"><div><small>کد پرسنلی</small>${escapeHtml(employee.personnelCode)}</div><div><small>سمت‌ها</small>${number(positions.length)} سمت</div><div><small>مدرک تحصیلی</small>${escapeHtml(educationLabel(employee.educationLevel))}</div><div><small>تاریخ شروع به کار (شمسی)</small>${jalaliDateCell(employee.startDate)}</div><div><small>سوابق آموزشی</small>${number(state.data.trainings.filter(t=>t.employeeId===id).length)} دوره</div></div>${employee.description?`<p class="muted profile-note">${escapeHtml(employee.description)}</p>`:''}<section class="profile-section"><div class="section-heading"><h3>سمت‌ها در شرکت‌ها</h3><button type="button" class="button secondary" id="add-employee-position">${icon('plus')}ثبت سمت</button></div>${positions.some(row=>row.companyId==null)?'<p class="form-hint">برای سمت‌های قبلی که شرکت آن‌ها مشخص نیست، از «تعیین شرکت» استفاده کنید.</p>':''}${positionTable}</section>${['scores','trainings'].map(key=>`<section class="profile-section"><div class="section-heading"><h3>${sections[key].title}</h3><button class="button secondary" data-profile-add="${key}">${icon('plus')}ثبت ${sections[key].singular}</button></div>${miniTable(key)}</section>`).join('')}`;
+  $('add-employee-position').onclick=()=>openForm(null,'positions',{employeeId:id});
+  $('profile-content').querySelectorAll('[data-position-edit]').forEach(b=>b.onclick=()=>openForm(positions.find(row=>row.id===Number(b.dataset.positionEdit)),'positions'));
+  $('profile-content').querySelectorAll('[data-position-delete]').forEach(b=>b.onclick=()=>openDelete(positions.find(row=>row.id===Number(b.dataset.positionDelete)),'positions'));
   $('profile-content').querySelectorAll('[data-profile-add]').forEach(b=>{
     if(b.dataset.profileAdd==='scores'){
       b.textContent='ورود و ویرایش نمرات';b.onclick=()=>openScoreSheet(id,true);
@@ -404,6 +419,7 @@ function showLoadError(message){
 function navigate(){
   let key=location.hash.slice(1);
   if(key==='requirements'){key='jobs';history.replaceState(null,'','#jobs');}
+  if(key==='positions'){key='employees';history.replaceState(null,'','#employees');}
   state.section=Object.hasOwn(sections,key)?key:'dashboard';
   state.search='';state.filter='';state.page=1;render();
 }

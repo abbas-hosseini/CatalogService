@@ -1,6 +1,8 @@
 package com.example.webapp.catalog;
 
 import jakarta.validation.Valid;
+import com.example.webapp.dates.JalaliDate;
+import com.example.webapp.dates.JalaliDates;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,9 +21,13 @@ public final class Requests {
         @NotBlank @Size(max = 40) String personnelCode,
         @NotBlank @Size(max = 80) String firstName,
         @NotBlank @Size(max = 80) String lastName,
-        @Pattern(regexp = "BELOW_DIPLOMA|DIPLOMA|ASSOCIATE|BACHELOR|DOCTORATE") String educationLevel,
-        LocalDate startDate,
-        @Size(max = 2000) String description) {}
+        @Pattern(regexp = "BELOW_DIPLOMA|DIPLOMA|ASSOCIATE|BACHELOR|MASTER|DOCTORATE") String educationLevel,
+        @JalaliDate String startDate,
+        @Size(max = 2000) String description) {
+        public Employee {
+            startDate = JalaliDates.normalize(startDate);
+        }
+    }
 
     public record Company(
         @NotBlank @Size(max = 40) String code,

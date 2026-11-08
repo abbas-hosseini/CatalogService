@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -27,7 +28,7 @@ class CatalogApiTests {
 
     @BeforeEach
     void emptyDatabase() {
-        for (String table : List.of("employee_trainings", "employee_scores", "job_requirements", "employees", "courses"))
+        for (String table : List.of("employee_positions", "employee_trainings", "employee_scores", "job_requirements", "employees", "companies", "courses"))
             jdbc.update("DELETE FROM " + table);
         jdbc.update("UPDATE evaluation_factors SET parent_id = NULL");
         jdbc.update("UPDATE jobs SET parent_id = NULL");
@@ -39,7 +40,9 @@ class CatalogApiTests {
     void completeEmployeeRecordCanBeCreatedReadEditedAndDeleted() throws Exception {
         long factor = create("factors", Map.of("code", "F1", "title", "کار تیمی"));
         long job = create("jobs", Map.of("code", "J1", "title", "کارشناس"));
-        long employee = create("employees", Map.of("personnelCode", "E1", "firstName", "آزمایش", "lastName", "سامانه", "jobId", job));
+        long company = create("companies", Map.of("code", "CO1", "title", "شرکت اول"));
+        long employee = create("employees", Map.of("personnelCode", "E1", "firstName", "آزمایش", "lastName", "سامانه"));
+        long position = create("positions", Map.of("employeeId", employee, "companyId", company, "jobId", job));
         long course = create("courses", Map.of("code", "C1", "title", "مهارت ارتباط", "durationHours", 12.5));
         long training = create("trainings", Map.of("employeeId", employee, "courseId", course, "completionDate", "2025-01-01", "certificateNumber", "CERT-1"));
         long score = create("scores", Map.of("employeeId", employee, "factorId", factor, "score", 75.25, "assessedOn", "2025-01-01"));
@@ -47,7 +50,8 @@ class CatalogApiTests {
 
         JsonNode employeeRow = read("employees").get(0);
         assertThat(employeeRow.get("firstName").asText()).isEqualTo("آزمایش");
-        assertThat(employeeRow.get("jobId").asLong()).isEqualTo(job);
+        assertThat(employeeRow.has("jobId")).isFalse();
+        assertThat(read("positions").get(0).get("jobId").asLong()).isEqualTo(job);
         assertThat(read("trainings").get(0).get("completionDate").asText()).isEqualTo("2025-01-01");
         assertThat(read("trainings").get(0).get("score").isNull()).isTrue();
         assertThat(read("scores").get(0).get("score").asDouble()).isEqualTo(75.25);
@@ -57,7 +61,7 @@ class CatalogApiTests {
         assertStatus("PUT", "jobs/" + job, Map.of("code", "J1", "title", "کارشناس ارشد"), 200);
         assertStatus("PUT", "courses/" + course, Map.of("code", "C1", "title", "ارتباط مؤثر", "durationHours", 16), 200);
         assertStatus("PUT", "employees/" + employee, Map.of("personnelCode", "E1", "firstName", "آزمایش", "lastName", "جدید"), 200);
-        assertThat(read("employees").get(0).get("jobId").isNull()).isTrue();
+        assertThat(read("positions").get(0).get("id").asLong()).isEqualTo(position);
         assertStatus("PUT", "scores/" + score, Map.of("employeeId", employee, "factorId", factor, "score", 100, "assessedOn", "2025-02-01"), 200);
         assertStatus("PUT", "requirements/" + requirement, Map.of("jobId", job, "factorId", factor, "minimumScore", 0), 200);
         assertStatus("PUT", "trainings/" + training, Map.of("employeeId", employee, "courseId", course, "completionDate", "2025-02-01", "score", 99), 200);
@@ -66,7 +70,7 @@ class CatalogApiTests {
         assertThat(read("trainings").get(0).get("score").asDouble()).isEqualTo(99);
 
         for (String path : List.of("scores/"+score, "requirements/"+requirement, "trainings/"+training,
-                "employees/"+employee, "courses/"+course, "jobs/"+job, "factors/"+factor)) assertStatus("DELETE", path, null, 204);
+                "positions/"+position, "employees/"+employee, "companies/"+company, "courses/"+course, "jobs/"+job, "factors/"+factor)) assertStatus("DELETE", path, null, 204);
         assertThat(read("summary").get("employees").asInt()).isZero();
     }
 
@@ -121,7 +125,7 @@ class CatalogApiTests {
     void validatesRequiredFieldsDatesAndReferences() throws Exception {
         assertStatus("POST", "factors", Map.of("code", " ", "title", ""), 400);
         assertStatus("POST", "factors", Map.of("code", "F", "title", "عامل", "parentId", 99999), 400);
-        assertStatus("POST", "employees", Map.of("personnelCode", "E", "firstName", "نام", "lastName", "نام", "jobId", 99999), 400);
+        assertStatus("POST", "employees", Map.of("personnelCode", "E", "firstName", "نام", "lastName", ""), 400);
         assertStatus("POST", "courses", Map.of("code", "C", "title", "دوره", "durationHours", 0), 400);
         assertStatus("POST", "scores", Map.of("employeeId", 1, "factorId", 1, "score", 50, "assessedOn", LocalDate.now().plusDays(1).toString()), 400);
         assertStatus("PUT", "jobs/99999", Map.of("code", "J", "title", "شغل"), 404);
@@ -133,11 +137,13 @@ class CatalogApiTests {
     void preventsDeletionOfReferencedEmployeeFactorJobAndCourse() throws Exception {
         long factor = create("factors", Map.of("code", "F", "title", "عامل"));
         long job = create("jobs", Map.of("code", "J", "title", "شغل"));
-        long employee = create("employees", Map.of("personnelCode", "E", "firstName", "نام", "lastName", "نام", "jobId", job));
+        long employee = create("employees", Map.of("personnelCode", "E", "firstName", "نام", "lastName", "نام"));
+        long company = create("companies", Map.of("code", "CO", "title", "شرکت"));
+        create("positions", Map.of("employeeId", employee, "companyId", company, "jobId", job));
         long course = create("courses", Map.of("code", "C", "title", "دوره", "durationHours", 8));
         create("scores", Map.of("employeeId", employee, "factorId", factor, "score", 50, "assessedOn", "2025-01-01"));
         create("trainings", Map.of("employeeId", employee, "courseId", course, "completionDate", "2025-01-01"));
-        for (String path : List.of("employees/"+employee, "factors/"+factor, "jobs/"+job, "courses/"+course))
+        for (String path : List.of("employees/"+employee, "companies/"+company, "factors/"+factor, "jobs/"+job, "courses/"+course))
             assertStatus("DELETE", path, null, 409);
         assertThat(read("employees").size()).isEqualTo(1);
     }
@@ -153,19 +159,20 @@ class CatalogApiTests {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"BELOW_DIPLOMA", "DIPLOMA", "ASSOCIATE", "BACHELOR", "DOCTORATE"})
+    @ValueSource(strings = {"BELOW_DIPLOMA", "DIPLOMA", "ASSOCIATE", "BACHELOR", "MASTER", "DOCTORATE"})
     void employeeEducationAndStartDateRoundTrip(String educationLevel) throws Exception {
         long id = create("employees", Map.of("personnelCode", "EDU", "firstName", "کارمند", "lastName", "آزمایشی",
-            "educationLevel", educationLevel, "startDate", "2020-03-20"));
+            "educationLevel", educationLevel, "startDate", "1399-01-01"));
         JsonNode row = read("employees").get(0);
         assertThat(row.get("educationLevel").asText()).isEqualTo(educationLevel);
-        assertThat(row.get("startDate").asText()).isEqualTo("2020-03-20");
+        assertThat(row.get("startDate").asText()).isEqualTo("1399-01-01");
+        assertThat(jdbc.queryForObject("SELECT start_date FROM employees WHERE id = ?", String.class, id)).isEqualTo("1399-01-01");
 
         assertStatus("PUT", "employees/" + id, Map.of("personnelCode", "EDU", "firstName", "کارمند", "lastName", "آزمایشی",
-            "educationLevel", "DOCTORATE", "startDate", "2021-04-10"), 200);
+            "educationLevel", "DOCTORATE", "startDate", "1400-01-21"), 200);
         row = read("employees").get(0);
         assertThat(row.get("educationLevel").asText()).isEqualTo("DOCTORATE");
-        assertThat(row.get("startDate").asText()).isEqualTo("2021-04-10");
+        assertThat(row.get("startDate").asText()).isEqualTo("1400-01-21");
     }
 
     @Test
@@ -175,7 +182,7 @@ class CatalogApiTests {
         assertThat(read("employees").get(0).get("educationLevel").isNull()).isTrue();
         assertThat(read("employees").get(0).get("startDate").isNull()).isTrue();
         payload.put("educationLevel", "BACHELOR");
-        payload.put("startDate", "2022-09-01");
+        payload.put("startDate", "1401-06-10");
         assertStatus("PUT", "employees/" + id, payload, 200);
         payload.put("educationLevel", null);
         payload.put("startDate", null);
@@ -277,6 +284,109 @@ class CatalogApiTests {
         assertStatus("PUT", "employees/999999/scores", Map.of("scores", List.of(validRow)), 404);
         assertStatus("PUT", path, Map.of("scores", List.of()), 200);
         assertThat(read("scores")).isEqualTo(before);
+    }
+
+    @Test
+    void companiesAndMultiplePositionsCanBeManagedIndependentlyOfEmployeeRecords() throws Exception {
+        long first = create("companies", Map.of("code", "CO1", "title", "شرکت اول"));
+        long second = create("companies", Map.of("code", "CO2", "title", "شرکت دوم"));
+        assertStatus("POST", "companies", Map.of("code", " CO1 ", "title", "تکراری"), 409);
+        assertStatus("POST", "companies", Map.of("code", "CO3", "title", " "), 400);
+        assertStatus("PUT", "companies/" + first, Map.of("code", "CO1", "title", "شرکت ویرایش‌شده", "description", "توضیحات"), 200);
+        assertThat(jdbc.queryForObject("SELECT title FROM companies WHERE id = ?", String.class, first)).isEqualTo("شرکت ویرایش‌شده");
+        long job = create("jobs", Map.of("code", "J1", "title", "کارشناس"));
+        long otherJob = create("jobs", Map.of("code", "J2", "title", "مدیر"));
+        long employee = create("employees", Map.of("personnelCode", "E1", "firstName", "نام", "lastName", "اول"));
+        long other = create("employees", Map.of("personnelCode", "E2", "firstName", "نام", "lastName", "دوم"));
+        var firstAssignment = Map.of("employeeId", employee, "companyId", first, "jobId", job);
+        long factor = create("factors", Map.of("code", "F", "title", "عامل"));
+        long course = create("courses", Map.of("code", "C", "title", "دوره", "durationHours", 8));
+        create("scores", Map.of("employeeId", employee, "factorId", factor, "score", 75, "assessedOn", "2025-01-01"));
+        create("trainings", Map.of("employeeId", employee, "courseId", course, "completionDate", "2025-01-01"));
+        JsonNode scoresBefore = read("scores"), trainingsBefore = read("trainings");
+        long position = create("positions", firstAssignment);
+        long secondPosition = create("positions", Map.of("employeeId", employee, "companyId", second, "jobId", job));
+        long thirdPosition = create("positions", Map.of("employeeId", employee, "companyId", first, "jobId", otherJob));
+        long otherPosition = create("positions", Map.of("employeeId", other, "companyId", first, "jobId", job));
+        assertStatus("POST", "positions", firstAssignment, 409);
+        assertStatus("PUT", "positions/" + thirdPosition, firstAssignment, 409);
+        assertThat(read("summary").get("positions").asInt()).isEqualTo(4);
+        assertStatus("PUT", "positions/" + position, Map.of("employeeId", employee, "companyId", first, "jobId", job, "notes", "سمت اصلی"), 200);
+        assertThat(jdbc.queryForObject("SELECT notes FROM employee_positions WHERE id = ?", String.class, position)).isEqualTo("سمت اصلی");
+        assertStatus("DELETE", "companies/" + second, null, 409);
+        assertStatus("DELETE", "employees/" + other, null, 409);
+        assertStatus("DELETE", "positions/" + secondPosition, null, 204);
+        assertStatus("DELETE", "companies/" + second, null, 204);
+        assertThat(read("employees").size()).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT employee_id FROM employee_positions WHERE id = ?", Long.class, otherPosition)).isEqualTo(other);
+        // Replacing a job/company assignment does not alter personal scores or training history.
+        assertStatus("PUT", "positions/" + thirdPosition, Map.of("employeeId", employee, "companyId", first, "jobId", otherJob), 200);
+        assertThat(read("positions").size()).isEqualTo(3);
+        assertThat(read("scores")).isEqualTo(scoresBefore);
+        assertThat(read("trainings")).isEqualTo(trainingsBefore);
+    }
+
+    @Test
+    void positionsRequireExistingEmployeeCompanyAndJobAndAllowCompletingLegacyAssignment() throws Exception {
+        long employee = create("employees", Map.of("personnelCode", "E", "firstName", "نام", "lastName", "نام"));
+        long company = create("companies", Map.of("code", "CO", "title", "شرکت"));
+        long job = create("jobs", Map.of("code", "J", "title", "شغل"));
+        var valid = Map.of("employeeId", employee, "companyId", company, "jobId", job);
+        for (String field : valid.keySet()) {
+            var invalid = new HashMap<String, Object>(valid);
+            for (Long value : Arrays.asList(null, -1L, 999999L)) {
+                invalid.put(field, value);
+                assertStatus("POST", "positions", invalid, 400);
+            }
+        }
+        assertThat(read("positions").size()).isZero();
+        assertStatus("PUT", "positions/999999", valid, 404);
+        assertStatus("PUT", "companies/999999", Map.of("code", "CO", "title", "شرکت"), 404);
+        jdbc.update("INSERT INTO employee_positions (employee_id, job_id) VALUES (?, ?)", employee, job);
+        var legacy = read("positions").get(0);
+        assertThat(legacy.get("companyId").isNull()).isTrue();
+        assertStatus("PUT", "positions/" + legacy.get("id").asLong(), valid, 200);
+        assertThat(read("positions").get(0).get("companyId").asLong()).isEqualTo(company);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"۱۴۰۳/۱۲/۳۰,1403-12-30", "١٤٠٤/١/١,1404-01-01", "1399-12-30,1399-12-30", "1404/6/31,1404-06-31", "1404-07-30,1404-07-30"})
+    void startDateAcceptsPersianDigitsAndRealJalaliDates(String input, String expected) throws Exception {
+        long id = create("employees", Map.of("personnelCode", "JALALI", "firstName", "نام", "lastName", "نام", "startDate", input));
+        assertThat(read("employees").get(0).get("startDate").asText()).isEqualTo(expected);
+        assertThat(jdbc.queryForObject("SELECT start_date FROM employees WHERE id = ?", String.class, id)).isEqualTo(expected);
+        assertStatus("PUT", "employees/" + id, Map.of("personnelCode", "JALALI", "firstName", "نام", "lastName", "نام", "startDate", "  "), 200);
+        assertThat(read("employees").get(0).get("startDate").isNull()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1404-12-30", "1403-12-31", "1404-07-31", "1404-13-01", "1404-00-10", "1404-01-00", "0000-01-01", "2020-03-20", "1404/1", "not-a-date"})
+    void invalidJalaliDateReportsFieldErrorWithoutChangingEmployee(String input) throws Exception {
+        var payload = new HashMap<String, Object>(Map.of("personnelCode", "JALALI", "firstName", "نام", "lastName", "نام", "startDate", "1403-12-30"));
+        long id = create("employees", payload);
+        payload.put("startDate", input);
+        var response = request("PUT", "employees/" + id, payload);
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
+        assertThat(json.readTree(response.body()).get("fields").has("startDate")).isTrue();
+        assertThat(read("employees").get(0).get("startDate").asText()).isEqualTo("1403-12-30");
+    }
+
+    @Test
+    void rejectedEmployeeValueIsNotReportedAsAForeignKeyDependency() throws Exception {
+        // Reproduce a database whose education constraint still predates the MASTER option.
+        jdbc.execute("ALTER TABLE employees ADD CONSTRAINT test_legacy_education CHECK (education_level IS NULL OR education_level <> 'MASTER')");
+        try {
+            var response = request("POST", "employees", Map.of("personnelCode", "CONSTRAINT-TEST",
+                "firstName", "PrivateFirstName", "lastName", "PrivateLastName", "educationLevel", "MASTER",
+                "startDate", "1403-01-01"));
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
+            assertThat(response.body()).contains("مقادیر مجاز بانک").doesNotContain("وابسته", "PrivateFirstName", "PrivateLastName", "test_legacy_education");
+            assertThat(read("employees").size()).isZero();
+        } finally {
+            jdbc.execute("ALTER TABLE employees DROP CONSTRAINT test_legacy_education");
+        }
+        create("employees", Map.of("personnelCode", "CONSTRAINT-TEST", "firstName", "نام", "lastName", "نام",
+            "educationLevel", "MASTER", "startDate", "1403-01-01"));
     }
 
     long create(String resource, Object body) throws Exception {
