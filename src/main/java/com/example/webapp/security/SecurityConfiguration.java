@@ -3,6 +3,7 @@ package com.example.webapp.security;
 import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.*;
 import org.springframework.security.authentication.*;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.*;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -31,12 +32,14 @@ public class SecurityConfiguration {
         };
     }
     @Bean SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationProvider provider, UserAccounts accounts,
-                                                  CaptchaService captcha, AttemptLimiter limiter) throws Exception {
+                                                  CaptchaService captcha, AttemptLimiter limiter, RequestAuthorization authorization) throws Exception {
         http.authenticationProvider(provider)
             .authorizeHttpRequests(auth -> auth
                 .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                .requestMatchers("/login.html", "/login.js", "/auth.js", "/auth.css", "/styles.css", "/favicon.ico",
+                .requestMatchers("/login.html", "/login.js", "/auth.js", "/auth.css", "/styles.css", "/fonts/vazirmatn/**", "/favicon.ico",
                     "/api/auth/csrf", "/api/auth/captcha", "/api/auth/login").permitAll()
+                .requestMatchers("/api/**", "/access.html", "/templates/employees-import.xlsx")
+                    .access((authentication, context) -> new AuthorizationDecision(authorization.allows(authentication.get(), context.getRequest())))
                 .anyRequest().authenticated())
             .requestCache(cache -> cache.disable())
             .formLogin(form -> form.loginPage("/login.html").loginProcessingUrl("/api/auth/login")
@@ -47,7 +50,7 @@ public class SecurityConfiguration {
             .exceptionHandling(errors -> errors.authenticationEntryPoint((request, response, exception) -> {
                 if (request.getServletPath().startsWith("/api/")) SecurityResponses.error(response, 401, "برای ادامه وارد سامانه شوید.");
                 else response.sendRedirect("/login.html");
-            }).accessDeniedHandler((request, response, exception) -> SecurityResponses.error(response, 403, "درخواست معتبر نیست یا مجوز کافی ندارد؛ صفحه را تازه‌سازی کنید.")))
+            }).accessDeniedHandler((request, response, exception) -> SecurityResponses.error(response, 403, "مجوز انجام این عملیات را ندارید یا درخواست منقضی شده است. صفحه را تازه‌سازی کنید؛ در صورت تداوم، با مدیر سامانه تماس بگیرید.")))
             .headers(headers -> headers
                 .frameOptions(frame -> frame.deny())
                 .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"))

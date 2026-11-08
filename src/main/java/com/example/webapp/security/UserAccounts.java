@@ -35,6 +35,7 @@ public class UserAccounts {
         if (!username.matches("[a-z0-9][a-z0-9._-]{2,63}")) throw new CatalogException(400, "نام کاربری اولیه باید ۳ تا ۶۴ حرف انگلیسی، عدد، نقطه، خط تیره یا زیرخط باشد.");
         PasswordPolicy.validate(password, username);
         jdbc.update("INSERT INTO app_users(username, password_hash, display_name) VALUES (?, ?, ?)", username, encoder.encode(password), "مدیر سامانه");
+        jdbc.update("INSERT INTO app_user_roles(user_id, role_id) SELECT u.id, r.id FROM app_users u CROSS JOIN app_roles r WHERE u.username = ? AND r.system_code = 'ADMIN'", username);
     }
 
     public UserPrincipal authenticate(String username, String password) {

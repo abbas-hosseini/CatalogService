@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>کاربران و نقش‌ها | شایستگی</title>
+  <link rel="preload" href="/fonts/vazirmatn/Vazirmatn-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/auth.css"><link rel="stylesheet" href="/access.css">
+  <script src="/auth.js" defer></script><script src="/access.js" defer></script>
+</head>
+<body class="account-page">
+  <header class="account-header"><a href="/" class="auth-brand"><span class="brand-symbol">ش</span><strong>شایستگی</strong></a><div class="page-actions"><a href="/" class="button secondary">بازگشت به سامانه</a><a href="/account.html" class="button secondary">پروفایل من</a></div></header>
+  <main class="access-main">
+    <div class="eyebrow">مدیریت دسترسی</div><h1>کاربران و نقش‌ها</h1>
+    <p class="auth-intro">مجوزها را به نقش‌ها بدهید و برای هر کاربر یک یا چند نقش انتخاب کنید. دسترسی کاربر، مجموع مجوزهای نقش‌های او است.</p>
+    <div id="access-error" class="alert error" role="alert" hidden></div><div id="access-success" class="alert success" role="status" hidden></div>
+    <div id="access-loading" class="loading">در حال دریافت اطلاعات…</div>
+    <div id="access-panel" hidden>
+      <div class="access-tabs" aria-label="بخش‌های مدیریت دسترسی"><button class="button primary" id="roles-tab" aria-pressed="true">نقش‌ها و مجوزها</button><button class="button secondary" id="users-tab" aria-pressed="false">کاربران</button></div>
+      <section class="data-panel"><div class="toolbar"><h2 id="access-list-title">نقش‌ها و مجوزها</h2><button id="access-add" class="button primary">ایجاد نقش</button></div><div id="access-list" class="table-wrap"></div></section>
+      <p class="form-hint">نقش «مدیر سامانه» دسترسی کامل دارد و قابل تغییر یا حذف نیست. حداقل یک مدیر فعال باید باقی بماند. کاربران بدون نقش فقط به پروفایل شخصی خود دسترسی دارند.</p>
+    </div>
+  </main>
+  <dialog id="role-dialog" class="role-dialog" aria-labelledby="role-title">
+    <div class="dialog-header"><h2 id="role-title">ایجاد نقش</h2><button type="button" class="icon-button" data-access-close="role-dialog" aria-label="بستن">×</button></div>
+    <form id="role-form"><div class="dialog-body">
+      <div id="role-error" class="alert error" role="alert" hidden></div>
+      <div class="form-grid"><div class="field"><label for="role-name">نام نقش <span class="required">*</span></label><input id="role-name" required maxlength="80"></div><div class="field"><label for="role-description">توضیحات</label><input id="role-description" maxlength="1000"></div></div>
+      <p class="form-hint">انتخاب هر عملیات، مجوز مشاهده همان بخش را نیز فعال می‌کند. برای شرایط احراز، مشاهده مشاغل و برای سمت‌ها، مشاهده کارمندان لازم است و خودکار اضافه می‌شود.</p>
+      <div id="permission-matrix" class="table-wrap"></div>
+      <p class="form-hint">برای نمایش نام گزینه‌ها در فرم‌های مجاز، فقط کد و نام اطلاعات مرتبط در اختیار کاربر قرار می‌گیرد. مجوز «مدیریت کاربران و نقش‌ها» امکان اعطای همهٔ دسترسی‌ها را می‌دهد.</p>
+    </div><div class="dialog-footer"><button class="button primary" id="role-save" type="submit">ذخیره نقش</button><button class="button secondary" type="button" data-access-close="role-dialog">بستن</button></div></form>
+  </dialog>
+  <dialog id="user-dialog" aria-labelledby="user-title">
+    <div class="dialog-header"><h2 id="user-title">ایجاد کاربر</h2><button type="button" class="icon-button" data-access-close="user-dialog" aria-label="بستن">×</button></div>
+    <form id="user-form"><div class="dialog-body">
+      <div id="user-error" class="alert error" role="alert" hidden></div>
+      <div class="form-grid">
+        <div class="field"><label for="user-username">نام کاربری <span class="required">*</span></label><input id="user-username" dir="ltr" required minlength="3" maxlength="64" pattern="[a-zA-Z0-9][a-zA-Z0-9._-]{2,63}" autocomplete="off"><span class="field-help">۳ تا ۶۴ حرف انگلیسی، عدد، نقطه، خط تیره یا زیرخط؛ پس از ایجاد قابل تغییر نیست.</span></div>
+        <div class="field"><label for="user-display-name">نام نمایشی <span class="required">*</span></label><input id="user-display-name" required maxlength="120"></div>
+        <div class="field"><label for="user-email">ایمیل</label><input id="user-email" type="email" dir="ltr" maxlength="254" autocomplete="off"></div>
+        <div class="field"><label for="user-enabled">وضعیت</label><select id="user-enabled"><option value="true">فعال</option><option value="false">غیرفعال</option></select></div>
+      </div>
+      <div id="new-user-passwords"><div class="form-grid">
+        <div class="field"><label for="user-password">رمز عبور <span class="required">*</span></label><input id="user-password" type="password" dir="ltr" minlength="15" maxlength="128" autocomplete="new-password"></div>
+        <div class="field"><label for="user-confirmation">تکرار رمز عبور <span class="required">*</span></label><input id="user-confirmation" type="password" dir="ltr" maxlength="128" autocomplete="new-password"></div>
+      </div><p class="form-hint">رمز باید ۱۵ تا ۱۲۸ نویسه و شامل حرف بزرگ و کوچک انگلیسی، عدد و نشانه باشد؛ نام کاربری و رمزهای رایج مجاز نیستند.</p></div>
+      <fieldset class="user-role-fieldset"><legend>نقش‌های کاربر</legend><div id="user-role-options" class="role-options"></div></fieldset>
+      <p class="form-hint">می‌توانید چند نقش انتخاب کنید. با غیرفعال‌کردن کاربر، نشست‌های قبلی او نیز نامعتبر می‌شوند.</p>
+    </div><div class="dialog-footer"><button class="button primary" id="user-save" type="submit">ذخیره کاربر</button><button class="button secondary" type="button" data-access-close="user-dialog">انصراف</button></div></form>
+  </dialog>
+  <dialog id="role-delete-dialog" class="small-dialog" aria-labelledby="role-delete-title"><div class="dialog-header"><h2 id="role-delete-title">حذف نقش</h2></div><div class="dialog-body"><p id="role-delete-description"></p><div id="role-delete-error" class="alert error" role="alert" hidden></div></div><div class="dialog-footer"><button class="button danger" id="role-delete-confirm">حذف نقش</button><button class="button secondary" data-access-close="role-delete-dialog">انصراف</button></div></dialog>
+</body>
+</html>

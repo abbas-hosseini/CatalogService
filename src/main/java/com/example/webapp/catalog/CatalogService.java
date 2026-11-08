@@ -1,5 +1,6 @@
 package com.example.webapp.catalog;
 
+import com.example.webapp.security.AccessControl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -11,7 +12,8 @@ import java.util.*;
 @Transactional
 public class CatalogService {
     private final CatalogRepository repository;
-    public CatalogService(CatalogRepository repository) { this.repository = repository; }
+    private final AccessControl access;
+    public CatalogService(CatalogRepository repository, AccessControl access) { this.repository = repository; this.access = access; }
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> list(Catalog catalog) { return repository.list(catalog); }
@@ -19,7 +21,8 @@ public class CatalogService {
     @Transactional(readOnly = true)
     public Map<String, Long> counts() {
         Map<String, Long> result = new LinkedHashMap<>();
-        for (Catalog catalog : Catalog.values()) result.put(catalog.path, repository.count(catalog));
+        var permissions = access.currentPermissions();
+        for (Catalog catalog : Catalog.values()) if (permissions.contains(catalog.path + ".view")) result.put(catalog.path, repository.count(catalog));
         return result;
     }
 
@@ -127,6 +130,15 @@ public class CatalogService {
         Map<Long, Map<String, Object>> existing = new HashMap<>();
         for (var row : repository.employeeScores(employeeId))
             existing.put(((Number) row.get("factorId")).longValue(), row);
+        // A mixed request is atomic: validate every actual mutation before writing any row.
+        var permissions = access.currentPermissions();
+        for (var entry : request.scores()) {
+            var row = existing.get(entry.factorId());
+            String action = entry.score() == null ? (row == null ? null : "delete") :
+                row == null ? "create" : entry.score().compareTo((BigDecimal) row.get("score")) == 0 ? null : "edit";
+            if (action != null && !permissions.contains("scores." + action))
+                throw new org.springframework.security.access.AccessDeniedException("Score " + action + " permission required");
+        }
         Date assessedOn = Date.valueOf(LocalDate.now());
         for (var entry : request.scores()) {
             var row = existing.get(entry.factorId());
