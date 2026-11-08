@@ -38,7 +38,7 @@ const educationLabel = value => Object.hasOwn(educationLevels,value) ? education
 
 const sections = {
   factors: {title:'عوامل ارزشیابی',singular:'عامل ارزشیابی',description:'شایستگی‌ها و شاخص‌های ارزیابی را در یک ساختار سلسله‌مراتبی تعریف کنید.',tree:true,fields:[codeField,titleField,refField('parentId','عامل بالادست','factors',false),descriptionField],columns:[['code','کد عامل'],['title','عنوان عامل'],['parentId','عامل بالادست','factors'],['description','توضیحات']]},
-  jobs: {title:'ساختار مشاغل',singular:'شغل',description:'مشاغل سازمان و ارتباط هر شغل با شغل بالادست را مدیریت کنید.',tree:true,fields:[codeField,titleField,refField('parentId','شغل بالادست','jobs',false),descriptionField],columns:[['code','کد شغل'],['title','عنوان شغل'],['parentId','شغل بالادست','jobs'],['description','توضیحات']]},
+  jobs: {title:'ساختار مشاغل',singular:'شغل',description:'مشاغل هر شرکت و ارتباط آن‌ها با شغل بالادست در همان شرکت را مدیریت کنید.',tree:true,filter:'companyId',filterRef:'companies',fields:[refField('companyId','شرکت','companies'),codeField,titleField,refField('parentId','شغل بالادست','jobs',false),descriptionField],columns:[['code','کد شغل'],['title','عنوان شغل'],['companyId','شرکت','companies'],['parentId','شغل بالادست','jobs'],['description','توضیحات']]},
   companies: {title:'شرکت‌ها',singular:'شرکت',description:'شرکت‌ها را تعریف کنید و سمت کارکنان در هر شرکت را از پروندهٔ کارمند ثبت کنید.',fields:[codeField,field('title','نام شرکت','text',{required:true,max:160}),descriptionField],columns:[['code','کد شرکت'],['title','نام شرکت'],['description','توضیحات']]},
   employees: {title:'کارمندان',singular:'کارمند',description:'مشخصات کارکنان را ثبت کنید؛ سمت‌های هر فرد در شرکت‌ها، شایستگی‌ها و آموزش‌ها در پروندهٔ او قرار دارند.',fields:[field('personnelCode','کد پرسنلی','text',{required:true,max:40}),field('firstName','نام','text',{required:true,max:80}),field('lastName','نام خانوادگی','text',{required:true,max:80}),field('educationLevel','مدرک تحصیلی','choice',{choices:educationLevels}),field('startDate','تاریخ شروع به کار (شمسی)','jalali'),descriptionField],columns:[['personnelCode','کد پرسنلی'],['fullName','نام و نام خانوادگی'],['positions','شرکت و سمت'],['educationLevel','مدرک تحصیلی'],['startDate','تاریخ شروع به کار (شمسی)']]},
   positions: {title:'سمت‌ها در شرکت‌ها',singular:'سمت',fields:[refField('companyId','شرکت','companies'),refField('jobId','سمت / شغل','jobs'),notesField],columns:[['companyId','شرکت','companies'],['jobId','سمت / شغل','jobs'],['notes','یادداشت']]},
@@ -92,13 +92,17 @@ function render() {
   $('page-description').textContent=config?.description||'اطلاعات کارکنان و شرایط احراز مشاغل، در یک فضای یکپارچه.';
   $('eyebrow').textContent=config?'مدیریت اطلاعات سازمان':'سرمایه انسانی سازمان';
   $('add-button').hidden=!config||!state.ready;
+  $('import-employees-button').hidden=state.section!=='employees'||!state.ready;
   if(config) $('add-button').innerHTML=icon('plus')+(state.section==='scores'?'ورود جدولی نمرات':`ثبت ${config.singular}`);
   if(!state.ready) {
     $('page-content').innerHTML='<div class="loading">دریافت اطلاعات انجام نشد. <button class="button secondary" id="retry-load">تلاش دوباره</button></div>';
     $('retry-load').onclick=initialize; return;
   }
   if(!config) return renderDashboard();
-  $('page-content').innerHTML=`<section class="data-panel" aria-label="فهرست ${config.title}"><div class="toolbar"><label class="search-box">${icon('search')}<input id="search" type="search" placeholder="جست‌وجو در ${config.title}…" aria-label="جست‌وجو در ${config.title}" value="${escapeHtml(state.search)}"></label>${config.filter?`<select id="record-filter" aria-label="فیلتر ${config.filterRef==='employees'?'کارمند':'شغل'}"><option value="">${config.filterRef==='employees'?'همه کارمندان':'همه مشاغل'}</option>${options(config.filterRef,state.filter)}</select>`:''}<span class="record-count" id="record-count"></span></div><div id="table-content"></div></section>${config.tree?`<div class="guide-strip">${icon('info')}هر مورد می‌تواند چند زیرمجموعه داشته باشد. با خالی گذاشتن «بالادست»، یک مورد در سطح اصلی بسازید.</div>`:state.section==='scores'?`<div class="guide-strip">${icon('info')}برای هر کارمند و عامل، یک نمره جاری نگهداری می‌شود. برای تغییر نمره از «ویرایش» استفاده کنید.</div>`:''}`;
+  const filterTitle=config.filterRef==='companies'?'شرکت':config.filterRef==='employees'?'کارمند':'شغل';
+  const filterAll=config.filterRef==='companies'?'همه شرکت‌ها':config.filterRef==='employees'?'همه کارمندان':'همه مشاغل';
+  const pendingJobs=state.section==='jobs'&&state.data.jobs.some(job=>job.companyId==null);
+  $('page-content').innerHTML=`${pendingJobs?`<div class="guide-strip">${icon('info')}شرکت بعضی مشاغل قبلی مشخص نشده است. با «ویرایش»، شرکت آن‌ها را از بالاترین شغل به زیرمجموعه‌ها تعیین کنید.</div>`:''}<section class="data-panel" aria-label="فهرست ${config.title}"><div class="toolbar"><label class="search-box">${icon('search')}<input id="search" type="search" placeholder="جست‌وجو در ${config.title}…" aria-label="جست‌وجو در ${config.title}" value="${escapeHtml(state.search)}"></label>${config.filter?`<select id="record-filter" aria-label="فیلتر ${filterTitle}"><option value="">${filterAll}</option>${options(config.filterRef,state.filter)}${pendingJobs?`<option value="unassigned" ${state.filter==='unassigned'?'selected':''}>شرکت مشخص نشده</option>`:''}</select>`:''}<span class="record-count" id="record-count"></span></div><div id="table-content"></div></section>${config.tree?`<div class="guide-strip">${icon('info')}هر مورد می‌تواند چند زیرمجموعه داشته باشد. با خالی گذاشتن «بالادست»، یک مورد در سطح اصلی بسازید.${state.section==='jobs'?' شغل و بالادست آن باید متعلق به یک شرکت باشند.':''}</div>`:state.section==='scores'?`<div class="guide-strip">${icon('info')}برای هر کارمند و عامل، یک نمره جاری نگهداری می‌شود. برای تغییر نمره از «ویرایش» استفاده کنید.</div>`:''}`;
   $('search').addEventListener('input',e=>{state.search=e.target.value;state.page=1;renderTable();});
   $('record-filter')?.addEventListener('change',e=>{state.filter=e.target.value;state.page=1;renderTable();});
   renderTable();
@@ -113,7 +117,7 @@ function renderDashboard() {
   $('page-content').innerHTML=`<section class="hero"><div class="hero-copy"><div class="hero-label">شناخت امروز، توسعه فردا</div><h2>شایستگی‌ها را بشناسید؛<br>مسیر رشد را روشن کنید.</h2><p>عوامل ارزشیابی، ساختار مشاغل و پرونده کارکنان را تکمیل کنید تا پایه‌ای دقیق برای بررسی شرایط احراز داشته باشید.</p><a class="button" href="#employees">مدیریت پرونده کارکنان ${icon('arrow')}</a></div><div class="hero-art" aria-hidden="true"><span class="orbit"></span><span class="orbit inner"></span>${icon('factors')}</div></section><div class="stats-grid">${[['employees','کارمند'],['jobs','شغل سازمانی'],['factors','عامل ارزشیابی'],['courses','دوره آموزشی']].map(([key,title])=>`<a class="stat-card" href="#${key}"><div><div class="stat-label">${title}</div><div class="stat-value">${number(count(key))}</div></div><span class="stat-icon">${icon(key)}</span></a>`).join('')}</div><div class="section-heading"><h3>تکمیل اطلاعات، قدم به قدم</h3><span>از تعریف ساختار تا ثبت شایستگی</span></div><div class="setup-grid">${steps.map(([key,n,title,desc,action])=>`<article class="setup-card"><span class="step-number">${n}</span><h3>${title}</h3><p>${desc}</p><a class="text-button" href="#${key}">${action} ${icon('arrow')}</a></article>`).join('')}</div><div class="guide-strip">${icon('info')}<span>${number(count('scores'))} نمره شایستگی، ${number(count('requirements'))} شرط احراز و ${number(count('trainings'))} سابقه آموزشی ثبت شده است.</span></div>`;
 }
 function treeRows(resource) {
-  const all=[...(state.data[resource]||[])].sort((a,b)=>a.title.localeCompare(b.title,'fa'));
+  const all=[...(state.data[resource]||[])].sort((a,b)=>(resource==='jobs'?companyLabel(a.companyId).localeCompare(companyLabel(b.companyId),'fa'):0)||a.title.localeCompare(b.title,'fa'));
   const result=[],visited=new Set(),children=new Map();
   for(const row of all) { const key=row.parentId??null;if(!children.has(key))children.set(key,[]);children.get(key).push(row); }
   const walk=(row,depth)=>{if(visited.has(row.id))return;visited.add(row.id);result.push({...row,depth});for(const child of children.get(row.id)||[])walk(child,depth+1);};
@@ -143,7 +147,7 @@ function cell(config,column,row) {
 function renderTable() {
   const key=state.section,config=sections[key];
   let rows=config.tree?treeRows(key):state.data[key];
-  if(state.filter)rows=rows.filter(r=>String(r[config.filter])===state.filter);
+  if(state.filter)rows=rows.filter(r=>state.filter==='unassigned'?r[config.filter]==null:String(r[config.filter])===state.filter);
   if(state.search.trim()) {
     const query=normalizeSearch(state.search.trim());
     rows=rows.filter(r=>normalizeSearch(config.columns.map(([k,,ref])=>ref?label(ref,r[k]):k==='positions'?employeePositions(r.id).map(positionLabel).join(' '):k==='fullName'?`${r.firstName} ${r.lastName}`:k==='educationLevel'?educationLabel(r[k]):k==='startDate'?`${r[k]||''} ${jalaliDate(r[k])}`:r[k]).join(' ')).includes(query));
@@ -168,9 +172,9 @@ function excludedDescendants(resource,id) {
   while(changed){changed=false;for(const r of state.data[resource]||[])if(excluded.has(r.parentId)&&!excluded.has(r.id)){excluded.add(r.id);changed=true;}}
   return excluded;
 }
-function options(resource,selected,excluded=new Set()) {
+function options(resource,selected,excluded=new Set(),include=()=>true) {
   const rows=sections[resource].tree?treeRows(resource):[...state.data[resource]].sort((a,b)=>recordLabel(resource,a).localeCompare(recordLabel(resource,b),'fa'));
-  return rows.filter(r=>!excluded.has(r.id)).map(r=>`<option value="${r.id}" ${String(r.id)===String(selected)?'selected':''}>${escapeHtml(`${'— '.repeat(r.depth||0)}${recordLabel(resource,r)} (${r.code||r.personnelCode})`)}</option>`).join('');
+  return rows.filter(r=>!excluded.has(r.id)&&include(r)).map(r=>`<option value="${r.id}" ${String(r.id)===String(selected)?'selected':''}>${escapeHtml(`${'— '.repeat(r.depth||0)}${recordLabel(resource,r)} (${r.code||r.personnelCode})`)}</option>`).join('');
 }
 function openForm(record=null,section=state.section,prefill={}) {
   if(state.busy)return;
@@ -185,13 +189,16 @@ function openForm(record=null,section=state.section,prefill={}) {
   }
   const config=sections[section];state.editing={section,id:record?.id??null,jobId,employeeId};
   const values=record||{...prefill};
-  if(!record&&section===state.section&&config.filter&&state.filter&&!values[config.filter])values[config.filter]=Number(state.filter);
+  if(!record&&section===state.section&&config.filter&&state.filter&&state.filter!=='unassigned'&&!values[config.filter])values[config.filter]=Number(state.filter);
   $('dialog-title').textContent=`${record?'ویرایش':'ثبت'} ${config.singular}`;
   $('form-context').hidden=!['requirements','positions'].includes(section);
   $('form-context').textContent=section==='requirements'?`شغل: ${label('jobs',jobId)}`:section==='positions'?`کارمند: ${label('employees',employeeId)}`:'';
   $('form-error').hidden=true;
   $('form-hint').textContent='فیلدهای ستاره‌دار الزامی هستند.'+(config.fields.some(f=>f.type==='date')?' تاریخ را به میلادی وارد کنید؛ در فهرست، تاریخ شمسی نمایش داده می‌شود.':'');
   if(section==='employees')$('form-hint').textContent+=' سمت‌ها در شرکت‌ها را پس از ذخیره، از پروندهٔ کارمند ثبت و ویرایش کنید.';
+  if(section==='jobs')$('form-hint').textContent+=' شرکت را انتخاب کنید؛ شغل بالادست باید از همان شرکت باشد.';
+  if(section==='jobs'&&record&&record.companyId==null&&record.parentId!=null)$('form-hint').textContent+=' برای حفظ سلسله‌مراتب، ابتدا شرکت شغل بالادست را مشخص کنید.';
+  if(section==='positions')$('form-hint').textContent+=' پس از انتخاب شرکت، فقط مشاغل همان شرکت قابل انتخاب‌اند.';
   $('form-fields').innerHTML=config.fields.map(f=>{
     const val=values[f.name]??(f.type==='date'&&f.required?today():'');
     const attrs=`id="field-${f.name}" name="${f.name}" ${f.required?'required':''} aria-describedby="error-${f.name}${f.type==='jalali'?` help-${f.name}`:''}"`;
@@ -205,6 +212,20 @@ function openForm(record=null,section=state.section,prefill={}) {
     const needsReference=f.type==='select'&&f.required&&!state.data[f.ref].length;
     return `<div class="field ${f.type==='textarea'?'full':''}"><label for="field-${f.name}">${f.label}${f.required?'<span class="required">*</span>':''}</label>${input}${needsReference?`<span class="field-help">ابتدا در بخش «${sections[f.ref].title}» اطلاعات ثبت کنید.</span>`:''}<span class="field-error" id="error-${f.name}"></span></div>`;
   }).join('');
+  if(section==='jobs'||section==='positions'){
+    const target=section==='jobs'?'parentId':'jobId';
+    const updateJobs=()=>{
+      const companyId=Number($('field-companyId').value)||null,select=$(`field-${target}`),selected=select.value;
+      const excluded=section==='jobs'?excludedDescendants('jobs',record?.id):new Set();
+      select.innerHTML=`<option value="">${!companyId?'ابتدا شرکت را انتخاب کنید':target==='parentId'?'بدون بالادست (سطح اصلی)':'انتخاب شغل…'}</option>`+options('jobs',selected,excluded,job=>companyId!=null&&job.companyId===companyId);
+      // Retain an existing parent visibly instead of silently detaching a legacy hierarchy.
+      if(target==='parentId'&&selected&&!Array.from(select.options).some(option=>option.value===selected)){
+        select.innerHTML+=`<option value="${escapeHtml(selected)}" selected>${escapeHtml(label('jobs',selected))} — شرکت نامشخص یا متفاوت؛ ابتدا بالادست را اصلاح کنید</option>`;
+      }
+      select.disabled=!companyId;
+    };
+    $('field-companyId').addEventListener('change',updateJobs);updateJobs();
+  }
   $('save-button').textContent='ذخیره اطلاعات';$('save-button').disabled=false;$('record-dialog').showModal();
 }
 function fieldError(name,message) {
@@ -235,6 +256,12 @@ async function saveForm(event) {
     }else payload[f.name]=value;
   }
   if(invalid){$('record-form').querySelector('[aria-invalid]')?.focus();return;}
+  if(section==='jobs'&&payload.parentId&&state.data.jobs.find(job=>job.id===payload.parentId)?.companyId!==payload.companyId){
+    fieldError('parentId','شغل بالادست باید متعلق به همین شرکت باشد. ابتدا شرکت بالادست را مشخص کنید یا بالادست دیگری انتخاب کنید.');$('field-parentId').focus();return;
+  }
+  if(section==='positions'&&state.data.jobs.find(job=>job.id===payload.jobId)?.companyId!==payload.companyId){
+    fieldError('jobId','یک شغل از شرکت انتخاب‌شده تعیین کنید.');$('field-jobId').focus();return;
+  }
   state.busy=true;$('save-button').disabled=true;$('save-button').textContent='در حال ذخیره…';
   try{
     await api(section+(id?`/${id}`:''),{method:id?'PUT':'POST',body:JSON.stringify(payload)});
@@ -406,7 +433,7 @@ function renderJobRequirements(){
   const table=rows.length
     ? `<div class="data-panel table-wrap"><table><thead><tr>${config.columns.map(column=>`<th scope="col">${column[1]}</th>`).join('')}<th scope="col">عملیات</th></tr></thead><tbody>${rows.map(row=>`<tr>${config.columns.map(column=>`<td>${cell(config,column,row)}</td>`).join('')}<td><div class="row-actions"><button class="text-button" data-requirement-edit="${row.id}" aria-label="ویرایش شرط ${escapeHtml(label('factors',row.factorId))}">ویرایش</button><button class="text-button danger-text" data-requirement-delete="${row.id}" aria-label="حذف شرط ${escapeHtml(label('factors',row.factorId))}">حذف</button></div></td></tr>`).join('')}</tbody></table></div>`
     : `<div class="empty-state"><div class="empty-symbol">${icon('requirements')}</div><h3>هنوز شرط احرازی برای این شغل ثبت نشده است</h3><p>با «ثبت شرط احراز»، عامل ارزشیابی و حداقل نمره لازم را مشخص کنید.</p></div>`;
-  $('job-content').innerHTML=`<div class="profile-summary"><div><small>کد شغل</small><span class="code">${escapeHtml(job.code)}</span></div><div><small>شغل بالادست</small>${escapeHtml(label('jobs',job.parentId)||'سطح اصلی')}</div><div><small>شرایط احراز</small>${number(rows.length)} عامل</div></div><section class="profile-section"><div class="section-heading"><h3>عوامل و حداقل نمرات لازم</h3><button type="button" class="button primary" id="add-job-requirement">${icon('plus')}ثبت شرط احراز</button></div>${table}</section>`;
+  $('job-content').innerHTML=`<div class="profile-summary"><div><small>کد شغل</small><span class="code">${escapeHtml(job.code)}</span></div><div><small>شرکت</small>${escapeHtml(companyLabel(job.companyId))}</div><div><small>شغل بالادست</small>${escapeHtml(label('jobs',job.parentId)||'سطح اصلی')}</div><div><small>شرایط احراز</small>${number(rows.length)} عامل</div></div><section class="profile-section"><div class="section-heading"><h3>عوامل و حداقل نمرات لازم</h3><button type="button" class="button primary" id="add-job-requirement">${icon('plus')}ثبت شرط احراز</button></div>${table}</section>`;
   $('add-job-requirement').onclick=()=>openForm(null,'requirements',{jobId:job.id});
   $('job-content').querySelectorAll('[data-requirement-edit]').forEach(button=>button.onclick=()=>openForm(rows.find(row=>row.id===Number(button.dataset.requirementEdit)),'requirements'));
   $('job-content').querySelectorAll('[data-requirement-delete]').forEach(button=>button.onclick=()=>openDelete(rows.find(row=>row.id===Number(button.dataset.requirementDelete)),'requirements'));

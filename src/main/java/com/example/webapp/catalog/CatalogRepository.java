@@ -52,8 +52,28 @@ public class CatalogRepository {
             Map.of("id", id), Integer.class) > 0;
     }
 
+    public Set<String> existingPersonnelCodes(Collection<String> codes) {
+        if (codes.isEmpty()) return Set.of();
+        return new HashSet<>(jdbc.queryForList("SELECT personnel_code FROM employees WHERE personnel_code IN (:codes)",
+            Map.of("codes", codes), String.class));
+    }
+
     public Long parent(Catalog catalog, long id) {
         return jdbc.queryForObject("SELECT parent_id FROM " + catalog.table + " WHERE id = :id", Map.of("id", id), Long.class);
+    }
+
+    public Long jobCompany(long id) {
+        return jdbc.queryForObject("SELECT company_id FROM jobs WHERE id = :id", Map.of("id", id), Long.class);
+    }
+
+    public boolean hasJobChildrenInOtherCompanies(long jobId, long companyId) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM jobs WHERE parent_id = :jobId AND company_id <> :companyId",
+            Map.of("jobId", jobId, "companyId", companyId), Integer.class) > 0;
+    }
+
+    public boolean hasJobPositionsInOtherCompanies(long jobId, long companyId) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM employee_positions WHERE job_id = :jobId AND company_id <> :companyId",
+            Map.of("jobId", jobId, "companyId", companyId), Integer.class) > 0;
     }
 
     // Column names are supplied only by the service, never by request parameters.

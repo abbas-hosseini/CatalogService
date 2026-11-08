@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#123d46"><title>شایستگی | مدیریت سرمایه انسانی</title>
-  <link rel="stylesheet" href="/styles.css"><script src="/app.js" defer></script>
+  <link rel="stylesheet" href="/styles.css"><script src="/app.js" defer></script><script src="/employee-import.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">رفتن به محتوای اصلی</a>
@@ -16,7 +16,7 @@
     <header class="topbar"><div class="breadcrumb">مدیریت سرمایه انسانی <span>/</span> <strong id="breadcrumb">نمای کلی</strong></div><div class="topbar-end"><time id="today"></time><span class="workspace-badge">فضای مدیریت</span></div></header>
     <main id="main" tabindex="-1">
       <div id="load-error" class="alert error" role="alert" hidden></div>
-      <div class="page-header"><div><div class="eyebrow" id="eyebrow">سرمایه انسانی سازمان</div><h1 id="page-title">نمای کلی</h1><p id="page-description"></p></div><button id="add-button" class="button primary" hidden></button></div>
+      <div class="page-header"><div><div class="eyebrow" id="eyebrow">سرمایه انسانی سازمان</div><h1 id="page-title">نمای کلی</h1><p id="page-description"></p></div><div class="page-actions"><button id="import-employees-button" class="button secondary" hidden>ورود از اکسل</button><button id="add-button" class="button primary" hidden></button></div></div>
       <div id="page-content" aria-live="polite"><div class="loading">در حال دریافت اطلاعات…</div></div>
     </main>
     <footer>شایستگی <span>سامانه ثبت و مدیریت شایستگی‌های کارکنان</span></footer>
@@ -52,6 +52,21 @@
       </div>
       <div class="dialog-footer"><button type="submit" class="button primary" id="score-sheet-save">ذخیره نمرات</button><button type="button" class="button secondary" data-close="score-sheet-dialog">انصراف</button></div>
     </form>
+  </dialog>
+  <dialog id="employee-import-dialog" class="employee-import-dialog" aria-labelledby="employee-import-title">
+    <div class="dialog-header"><div><div class="eyebrow">ثبت گروهی کارمندان</div><h2 id="employee-import-title">ورود کارمندان از اکسل</h2></div><button type="button" class="icon-button" data-close="employee-import-dialog" aria-label="بستن ورود اکسل">×</button></div>
+    <div class="dialog-body">
+      <p class="form-hint">۱. قالب را دریافت و تکمیل کنید. ۲. فایل را بررسی کنید. ۳. پس از بررسی پیش‌نمایش، ثبت را تأیید کنید.</p>
+      <a class="button secondary" href="/templates/employees-import.xlsx" download>دریافت قالب اکسل</a>
+      <p class="import-guide">فقط برگهٔ اول خوانده می‌شود. کد پرسنلی، نام و نام خانوادگی الزامی‌اند. تاریخ شروع به کار را به‌صورت متن شمسی مانند ۱۴۰۳/۰۱/۰۱ وارد کنید. برای حفظ صفرهای ابتدای کد، قالب سلول را Text قرار دهید.</p>
+      <div class="field"><label for="employee-import-file">فایل اکسل</label><input id="employee-import-file" type="file" accept=".xlsx,.xls" aria-describedby="employee-import-help"><span class="field-help" id="employee-import-help">xlsx یا xls، حداکثر ۵ مگابایت و ۱۰۰۰ ردیف اطلاعات.</span></div>
+      <p class="import-guide">این بخش کارمندان جدید را ثبت می‌کند. کدهای تکراری و ردیف‌های نامعتبر باید در فایل اصلاح شوند؛ تا رفع همهٔ خطاها هیچ ردیفی ذخیره نمی‌شود. سمت‌های هر فرد را پس از ورود، در پروندهٔ او تعیین کنید.</p>
+      <div id="employee-import-error" class="alert error" role="alert" hidden></div>
+      <p id="employee-import-status" role="status"></p>
+      <label id="employee-import-filter-label" class="import-error-filter" hidden><input id="employee-import-errors-only" type="checkbox"> فقط ردیف‌های دارای خطا</label>
+      <div id="employee-import-results"></div>
+    </div>
+    <div class="dialog-footer"><button type="button" id="employee-import-preview" class="button secondary">بررسی فایل و پیش‌نمایش</button><button type="button" id="employee-import-save" class="button primary" disabled>تأیید و ثبت کارمندان</button><button type="button" class="button secondary" data-close="employee-import-dialog">انصراف</button></div>
   </dialog>
   <div id="toast" class="toast" role="status" hidden></div>
 </body>

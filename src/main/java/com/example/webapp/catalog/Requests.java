@@ -17,6 +17,13 @@ public final class Requests {
         @Positive Long parentId,
         @Size(max = 2000) String description) {}
 
+    public record Job(
+        @NotBlank @Size(max = 40) String code,
+        @NotBlank @Size(max = 160) String title,
+        @NotNull @Positive Long companyId,
+        @Positive Long parentId,
+        @Size(max = 2000) String description) {}
+
     public record Employee(
         @NotBlank @Size(max = 40) String personnelCode,
         @NotBlank @Size(max = 80) String firstName,

@@ -6,6 +6,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.sql.SQLException;
@@ -14,6 +16,15 @@ import java.util.*;
 @RestControllerAdvice
 public class ApiExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<?> oversizedFile(MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(413).body(Map.of("message", "حجم فایل باید حداکثر ۵ مگابایت باشد."));
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    ResponseEntity<?> missingFile(MissingServletRequestPartException e) {
+        return ResponseEntity.badRequest().body(Map.of("message", "فایل اکسل را انتخاب کنید."));
+    }
     @ExceptionHandler(CatalogException.class)
     ResponseEntity<?> domain(CatalogException e) { return ResponseEntity.status(e.status()).body(Map.of("message", e.getMessage())); }
 

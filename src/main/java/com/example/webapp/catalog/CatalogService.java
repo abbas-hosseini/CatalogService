@@ -24,19 +24,36 @@ public class CatalogService {
     }
 
     public long saveTree(Catalog catalog, Long id, Requests.TreeItem request) {
-        if (catalog != Catalog.FACTORS && catalog != Catalog.JOBS) throw new IllegalArgumentException("Not a tree");
+        if (catalog != Catalog.FACTORS) throw new IllegalArgumentException("Use saveJob for company-owned jobs");
+        validateTree(catalog, id, request.parentId());
+        return repository.save(catalog, id, fields("code", clean(request.code()), "title", clean(request.title()),
+            "parent_id", request.parentId(), "description", clean(request.description())));
+    }
+
+    private void validateTree(Catalog catalog, Long id, Long parentId) {
         repository.lockTree(catalog);
         requireExisting(catalog, id);
-        requireReference(catalog, request.parentId());
+        requireReference(catalog, parentId);
         Set<Long> visited = new HashSet<>();
-        Long parent = request.parentId();
+        Long parent = parentId;
         while (parent != null) {
             if (parent.equals(id) || !visited.add(parent))
                 throw new CatalogException(400, "والد انتخاب‌شده باعث ایجاد چرخه در ساختار می‌شود. یک والد دیگر انتخاب کنید.");
             parent = repository.parent(catalog, parent);
         }
-        return repository.save(catalog, id, fields("code", clean(request.code()), "title", clean(request.title()),
-            "parent_id", request.parentId(), "description", clean(request.description())));
+    }
+
+    public long saveJob(Long id, Requests.Job r) {
+        validateTree(Catalog.JOBS, id, r.parentId());
+        requireReference(Catalog.COMPANIES, r.companyId());
+        if (r.parentId() != null && !r.companyId().equals(repository.jobCompany(r.parentId())))
+            throw new CatalogException(400, "شغل بالادست باید متعلق به همین شرکت باشد. اگر شرکت شغل بالادست مشخص نیست، ابتدا آن را تعیین کنید.");
+        if (id != null && repository.hasJobChildrenInOtherCompanies(id, r.companyId()))
+            throw new CatalogException(409, "این شغل زیرمجموعه‌هایی در شرکت دیگری دارد. ابتدا ارتباط زیرمجموعه‌ها را اصلاح کنید.");
+        if (id != null && repository.hasJobPositionsInOtherCompanies(id, r.companyId()))
+            throw new CatalogException(409, "این شغل در سمت‌های کارمندانِ شرکت دیگری استفاده شده است. ابتدا آن سمت‌ها را اصلاح کنید.");
+        return repository.save(Catalog.JOBS, id, fields("code", clean(r.code()), "title", clean(r.title()),
+            "company_id", r.companyId(), "parent_id", r.parentId(), "description", clean(r.description())));
     }
 
     public long saveEmployee(Long id, Requests.Employee r) {
@@ -54,10 +71,17 @@ public class CatalogService {
     }
 
     public long savePosition(Long id, Requests.EmployeePosition r) {
+        // Serialize company changes and assignments so they cannot create mismatched positions.
+        repository.lockTree(Catalog.JOBS);
         requireExisting(Catalog.POSITIONS, id);
         requireReference(Catalog.EMPLOYEES, r.employeeId());
         requireReference(Catalog.COMPANIES, r.companyId());
         requireReference(Catalog.JOBS, r.jobId());
+        Long jobCompany = repository.jobCompany(r.jobId());
+        if (jobCompany == null)
+            throw new CatalogException(400, "ابتدا شرکت این شغل را در بخش ساختار مشاغل مشخص کنید.");
+        if (!r.companyId().equals(jobCompany))
+            throw new CatalogException(400, "شغل انتخاب‌شده متعلق به شرکت انتخاب‌شده نیست.");
         return repository.save(Catalog.POSITIONS, id, fields("employee_id", r.employeeId(),
             "company_id", r.companyId(), "job_id", r.jobId(), "notes", clean(r.notes())));
     }

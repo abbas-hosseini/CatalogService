@@ -28,19 +28,20 @@ class CatalogApiTests {
 
     @BeforeEach
     void emptyDatabase() {
-        for (String table : List.of("employee_positions", "employee_trainings", "employee_scores", "job_requirements", "employees", "companies", "courses"))
+        for (String table : List.of("employee_positions", "employee_trainings", "employee_scores", "job_requirements", "employees", "courses"))
             jdbc.update("DELETE FROM " + table);
         jdbc.update("UPDATE evaluation_factors SET parent_id = NULL");
         jdbc.update("UPDATE jobs SET parent_id = NULL");
         jdbc.update("DELETE FROM evaluation_factors");
         jdbc.update("DELETE FROM jobs");
+        jdbc.update("DELETE FROM companies");
     }
 
     @Test
     void completeEmployeeRecordCanBeCreatedReadEditedAndDeleted() throws Exception {
         long factor = create("factors", Map.of("code", "F1", "title", "کار تیمی"));
-        long job = create("jobs", Map.of("code", "J1", "title", "کارشناس"));
         long company = create("companies", Map.of("code", "CO1", "title", "شرکت اول"));
+        long job = create("jobs", Map.of("code", "J1", "title", "کارشناس", "companyId", company));
         long employee = create("employees", Map.of("personnelCode", "E1", "firstName", "آزمایش", "lastName", "سامانه"));
         long position = create("positions", Map.of("employeeId", employee, "companyId", company, "jobId", job));
         long course = create("courses", Map.of("code", "C1", "title", "مهارت ارتباط", "durationHours", 12.5));
@@ -58,7 +59,7 @@ class CatalogApiTests {
         assertThat(read("summary").get("employees").asInt()).isEqualTo(1);
 
         assertStatus("PUT", "factors/" + factor, Map.of("code", "F1", "title", "کار گروهی"), 200);
-        assertStatus("PUT", "jobs/" + job, Map.of("code", "J1", "title", "کارشناس ارشد"), 200);
+        assertStatus("PUT", "jobs/" + job, Map.of("code", "J1", "title", "کارشناس ارشد", "companyId", company), 200);
         assertStatus("PUT", "courses/" + course, Map.of("code", "C1", "title", "ارتباط مؤثر", "durationHours", 16), 200);
         assertStatus("PUT", "employees/" + employee, Map.of("personnelCode", "E1", "firstName", "آزمایش", "lastName", "جدید"), 200);
         assertThat(read("positions").get(0).get("id").asLong()).isEqualTo(position);
@@ -70,20 +71,21 @@ class CatalogApiTests {
         assertThat(read("trainings").get(0).get("score").asDouble()).isEqualTo(99);
 
         for (String path : List.of("scores/"+score, "requirements/"+requirement, "trainings/"+training,
-                "positions/"+position, "employees/"+employee, "companies/"+company, "courses/"+course, "jobs/"+job, "factors/"+factor)) assertStatus("DELETE", path, null, 204);
+                "positions/"+position, "employees/"+employee, "courses/"+course, "jobs/"+job, "companies/"+company, "factors/"+factor)) assertStatus("DELETE", path, null, 204);
         assertThat(read("summary").get("employees").asInt()).isZero();
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"factors", "jobs"})
     void hierarchiesRejectSelfParentAndDescendantCycles(String resource) throws Exception {
-        long root = create(resource, Map.of("code", "ROOT", "title", "ریشه"));
-        long child = create(resource, Map.of("code", "CHILD", "title", "فرزند", "parentId", root));
-        long leaf = create(resource, Map.of("code", "LEAF", "title", "برگ", "parentId", child));
-        assertStatus("PUT", resource+"/"+root, Map.of("code", "ROOT", "title", "ریشه", "parentId", root), 400);
-        assertStatus("PUT", resource+"/"+root, Map.of("code", "ROOT", "title", "ریشه", "parentId", leaf), 400);
+        Long company = resource.equals("jobs") ? create("companies", Map.of("code", "CO", "title", "شرکت")) : null;
+        long root = create(resource, treePayload("ROOT", null, company));
+        long child = create(resource, treePayload("CHILD", root, company));
+        long leaf = create(resource, treePayload("LEAF", child, company));
+        assertStatus("PUT", resource+"/"+root, treePayload("ROOT", root, company), 400);
+        assertStatus("PUT", resource+"/"+root, treePayload("ROOT", leaf, company), 400);
         assertStatus("DELETE", resource+"/"+root, null, 409);
-        assertStatus("PUT", resource+"/"+leaf, Map.of("code", "LEAF", "title", "برگ مستقل"), 200);
+        assertStatus("PUT", resource+"/"+leaf, treePayload("LEAF", null, company), 200);
         assertStatus("DELETE", resource+"/"+child, null, 204);
         assertStatus("DELETE", resource+"/"+root, null, 204);
     }
@@ -92,7 +94,8 @@ class CatalogApiTests {
     void duplicateCodesAndRelationshipsAreRejectedWithoutChangingExistingData() throws Exception {
         long factor = create("factors", Map.of("code", "F1", "title", "دانش"));
         assertStatus("POST", "factors", Map.of("code", " F1 ", "title", "تکراری"), 409);
-        long job = create("jobs", Map.of("code", "J1", "title", "شغل"));
+        long company = create("companies", Map.of("code", "CO", "title", "شرکت"));
+        long job = create("jobs", Map.of("code", "J1", "title", "شغل", "companyId", company));
         long employee = create("employees", Map.of("personnelCode", "E1", "firstName", "نام", "lastName", "خانوادگی"));
         assertStatus("POST", "employees", Map.of("personnelCode", "E1", "firstName", "نام", "lastName", "خانوادگی"), 409);
         long course = create("courses", Map.of("code", "C1", "title", "دوره", "durationHours", 8));
@@ -128,7 +131,7 @@ class CatalogApiTests {
         assertStatus("POST", "employees", Map.of("personnelCode", "E", "firstName", "نام", "lastName", ""), 400);
         assertStatus("POST", "courses", Map.of("code", "C", "title", "دوره", "durationHours", 0), 400);
         assertStatus("POST", "scores", Map.of("employeeId", 1, "factorId", 1, "score", 50, "assessedOn", LocalDate.now().plusDays(1).toString()), 400);
-        assertStatus("PUT", "jobs/99999", Map.of("code", "J", "title", "شغل"), 404);
+        assertStatus("PUT", "jobs/99999", Map.of("code", "J", "title", "شغل", "companyId", 99999), 404);
         assertStatus("DELETE", "employees/99999", null, 404);
         assertStatus("GET", "not-a-table", null, 404);
     }
@@ -136,9 +139,9 @@ class CatalogApiTests {
     @Test
     void preventsDeletionOfReferencedEmployeeFactorJobAndCourse() throws Exception {
         long factor = create("factors", Map.of("code", "F", "title", "عامل"));
-        long job = create("jobs", Map.of("code", "J", "title", "شغل"));
         long employee = create("employees", Map.of("personnelCode", "E", "firstName", "نام", "lastName", "نام"));
         long company = create("companies", Map.of("code", "CO", "title", "شرکت"));
+        long job = create("jobs", Map.of("code", "J", "title", "شغل", "companyId", company));
         create("positions", Map.of("employeeId", employee, "companyId", company, "jobId", job));
         long course = create("courses", Map.of("code", "C", "title", "دوره", "durationHours", 8));
         create("scores", Map.of("employeeId", employee, "factorId", factor, "score", 50, "assessedOn", "2025-01-01"));
@@ -294,8 +297,9 @@ class CatalogApiTests {
         assertStatus("POST", "companies", Map.of("code", "CO3", "title", " "), 400);
         assertStatus("PUT", "companies/" + first, Map.of("code", "CO1", "title", "شرکت ویرایش‌شده", "description", "توضیحات"), 200);
         assertThat(jdbc.queryForObject("SELECT title FROM companies WHERE id = ?", String.class, first)).isEqualTo("شرکت ویرایش‌شده");
-        long job = create("jobs", Map.of("code", "J1", "title", "کارشناس"));
-        long otherJob = create("jobs", Map.of("code", "J2", "title", "مدیر"));
+        long job = create("jobs", Map.of("code", "J1", "title", "کارشناس", "companyId", first));
+        long otherJob = create("jobs", Map.of("code", "J2", "title", "مدیر", "companyId", first));
+        long secondCompanyJob = create("jobs", Map.of("code", "J3", "title", "کارشناس شرکت دوم", "companyId", second));
         long employee = create("employees", Map.of("personnelCode", "E1", "firstName", "نام", "lastName", "اول"));
         long other = create("employees", Map.of("personnelCode", "E2", "firstName", "نام", "lastName", "دوم"));
         var firstAssignment = Map.of("employeeId", employee, "companyId", first, "jobId", job);
@@ -305,7 +309,7 @@ class CatalogApiTests {
         create("trainings", Map.of("employeeId", employee, "courseId", course, "completionDate", "2025-01-01"));
         JsonNode scoresBefore = read("scores"), trainingsBefore = read("trainings");
         long position = create("positions", firstAssignment);
-        long secondPosition = create("positions", Map.of("employeeId", employee, "companyId", second, "jobId", job));
+        long secondPosition = create("positions", Map.of("employeeId", employee, "companyId", second, "jobId", secondCompanyJob));
         long thirdPosition = create("positions", Map.of("employeeId", employee, "companyId", first, "jobId", otherJob));
         long otherPosition = create("positions", Map.of("employeeId", other, "companyId", first, "jobId", job));
         assertStatus("POST", "positions", firstAssignment, 409);
@@ -316,6 +320,8 @@ class CatalogApiTests {
         assertStatus("DELETE", "companies/" + second, null, 409);
         assertStatus("DELETE", "employees/" + other, null, 409);
         assertStatus("DELETE", "positions/" + secondPosition, null, 204);
+        assertStatus("DELETE", "companies/" + second, null, 409);
+        assertStatus("DELETE", "jobs/" + secondCompanyJob, null, 204);
         assertStatus("DELETE", "companies/" + second, null, 204);
         assertThat(read("employees").size()).isEqualTo(2);
         assertThat(jdbc.queryForObject("SELECT employee_id FROM employee_positions WHERE id = ?", Long.class, otherPosition)).isEqualTo(other);
@@ -330,7 +336,7 @@ class CatalogApiTests {
     void positionsRequireExistingEmployeeCompanyAndJobAndAllowCompletingLegacyAssignment() throws Exception {
         long employee = create("employees", Map.of("personnelCode", "E", "firstName", "نام", "lastName", "نام"));
         long company = create("companies", Map.of("code", "CO", "title", "شرکت"));
-        long job = create("jobs", Map.of("code", "J", "title", "شغل"));
+        long job = create("jobs", Map.of("code", "J", "title", "شغل", "companyId", company));
         var valid = Map.of("employeeId", employee, "companyId", company, "jobId", job);
         for (String field : valid.keySet()) {
             var invalid = new HashMap<String, Object>(valid);
@@ -387,6 +393,66 @@ class CatalogApiTests {
         }
         create("employees", Map.of("personnelCode", "CONSTRAINT-TEST", "firstName", "نام", "lastName", "نام",
             "educationLevel", "MASTER", "startDate", "1403-01-01"));
+    }
+
+    @Test
+    void jobsRequireCompanyAndRejectParentsAndPositionsFromAnotherCompany() throws Exception {
+        long first = create("companies", Map.of("code", "CO1", "title", "اول"));
+        long second = create("companies", Map.of("code", "CO2", "title", "دوم"));
+        for (Long company : Arrays.asList(null, -1L, 999999L)) {
+            var invalid = treePayload("INVALID", null, null);
+            invalid.put("companyId", company);
+            assertStatus("POST", "jobs", invalid, 400);
+        }
+        long root = create("jobs", treePayload("ROOT", null, first));
+        long child = create("jobs", treePayload("CHILD", root, first));
+        long otherJob = create("jobs", treePayload("OTHER", null, second));
+        assertStatus("POST", "jobs", treePayload("CROSS", root, second), 400);
+        assertStatus("PUT", "jobs/" + child, treePayload("CHILD", otherJob, first), 400);
+        assertStatus("PUT", "jobs/" + root, treePayload("ROOT", null, second), 409);
+        long employee = create("employees", Map.of("personnelCode", "E", "firstName", "نام", "lastName", "نام"));
+        long position = create("positions", Map.of("employeeId", employee, "companyId", first, "jobId", child));
+        assertStatus("POST", "positions", Map.of("employeeId", employee, "companyId", second, "jobId", child), 400);
+        assertStatus("PUT", "positions/" + position, Map.of("employeeId", employee, "companyId", first, "jobId", otherJob), 400);
+        assertStatus("PUT", "jobs/" + child, treePayload("CHILD", null, second), 409);
+        assertThat(jdbc.queryForObject("SELECT company_id FROM jobs WHERE id = ?", Long.class, child)).isEqualTo(first);
+        assertThat(jdbc.queryForObject("SELECT company_id FROM employee_positions WHERE id = ?", Long.class, position)).isEqualTo(first);
+        assertStatus("DELETE", "positions/" + position, null, 204);
+        assertStatus("PUT", "jobs/" + child, treePayload("CHILD", otherJob, second), 200);
+        assertThat(jdbc.queryForObject("SELECT company_id FROM jobs WHERE id = ?", Long.class, child)).isEqualTo(second);
+        assertThat(read("jobs").get(0).has("companyId")).isTrue();
+    }
+
+    @Test
+    void legacyJobsCanBeAssignedTopDownWithoutLosingRequirementsOrPositions() throws Exception {
+        long first = create("companies", Map.of("code", "CO1", "title", "اول"));
+        long second = create("companies", Map.of("code", "CO2", "title", "دوم"));
+        jdbc.update("INSERT INTO jobs (code, title) VALUES ('OLD-ROOT', 'Previous root')");
+        long root = jdbc.queryForObject("SELECT id FROM jobs WHERE code = 'OLD-ROOT'", Long.class);
+        jdbc.update("INSERT INTO jobs (code, title, parent_id) VALUES ('OLD-CHILD', 'Previous child', ?)", root);
+        long child = jdbc.queryForObject("SELECT id FROM jobs WHERE code = 'OLD-CHILD'", Long.class);
+        long factor = create("factors", treePayload("FACTOR", null, null));
+        long requirement = create("requirements", Map.of("jobId", child, "factorId", factor, "minimumScore", 75));
+        long employee = create("employees", Map.of("personnelCode", "E", "firstName", "نام", "lastName", "نام"));
+        jdbc.update("INSERT INTO employee_positions (employee_id, company_id, job_id, notes) VALUES (?, ?, ?, 'Previous note')", employee, first, child);
+        long position = read("positions").get(0).get("id").asLong();
+        assertStatus("POST", "positions", Map.of("employeeId", employee, "companyId", first, "jobId", root), 400);
+        assertStatus("PUT", "jobs/" + child, treePayload("OLD-CHILD", root, first), 400);
+        assertStatus("PUT", "jobs/" + root, treePayload("OLD-ROOT", null, first), 200);
+        assertStatus("PUT", "jobs/" + child, treePayload("OLD-CHILD", null, second), 409);
+        assertStatus("PUT", "jobs/" + child, treePayload("OLD-CHILD", root, first), 200);
+        assertThat(jdbc.queryForObject("SELECT parent_id FROM jobs WHERE id = ?", Long.class, child)).isEqualTo(root);
+        assertThat(read("requirements").get(0).get("id").asLong()).isEqualTo(requirement);
+        assertThat(read("positions").get(0).get("id").asLong()).isEqualTo(position);
+        assertThat(read("positions").get(0).get("notes").asText()).isEqualTo("Previous note");
+        assertStatus("PUT", "positions/" + position, Map.of("employeeId", employee, "companyId", first, "jobId", child, "notes", "Previous note"), 200);
+    }
+
+    Map<String, Object> treePayload(String code, Long parentId, Long companyId) {
+        var payload = new HashMap<String, Object>(Map.of("code", code, "title", code));
+        if (parentId != null) payload.put("parentId", parentId);
+        if (companyId != null) payload.put("companyId", companyId);
+        return payload;
     }
 
     long create(String resource, Object body) throws Exception {
