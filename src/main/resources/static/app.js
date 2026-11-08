@@ -68,7 +68,7 @@ const employeePositions = id => (state.data.positions||[]).filter(row=>row.emplo
 const positionLabel = row => `${companyLabel(row.companyId)} — ${label('jobs',row.jobId)}`;
 async function api(resource, options={}) {
   let response;
-  try { response=await fetch(`/api/${resource}`,{headers:{'Content-Type':'application/json'},...options}); }
+  try { response=await auth.request(`/api/${resource}`,{headers:{'Content-Type':'application/json'},...options}); }
   catch { throw new Error('ارتباط با سرور برقرار نشد. اتصال را بررسی و دوباره تلاش کنید.'); }
   if(response.status===204) return null;
   const data=await response.json().catch(()=>({message:'پاسخ سرور قابل خواندن نیست.'}));
@@ -450,7 +450,8 @@ function navigate(){
   state.section=Object.hasOwn(sections,key)?key:'dashboard';
   state.search='';state.filter='';state.page=1;render();
 }
-async function initialize(){try{await loadData();navigate();}catch(error){showLoadError(error.message);render();}}
+async function initialize(){try{const user=await auth.json('/api/account');$('my-account').textContent=user.displayName||'پروفایل من';await auth.csrf();await loadData();navigate();}catch(error){showLoadError(error.message);render();}}
+$('logout-button').onclick=async()=>{if(state.busy)return;state.busy=true;try{await auth.logout();}catch(error){toast(error.message);state.busy=false;}};
 $('today').textContent=new Intl.DateTimeFormat('fa-IR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
 $('add-button').onclick=()=>openForm();$('record-form').addEventListener('submit',saveForm);$('confirm-delete').onclick=confirmDelete;
 $('score-sheet-form').addEventListener('submit',saveScoreSheet);

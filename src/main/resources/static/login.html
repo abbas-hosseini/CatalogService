@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ورود | شایستگی</title><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/auth.css"><script src="/auth.js" defer></script><script src="/login.js" defer></script></head>
+<body class="auth-page">
+  <main class="login-card">
+    <div class="auth-brand"><span class="brand-symbol">ش</span><div><strong>شایستگی</strong><p>مدیریت سرمایه انسانی</p></div></div>
+    <h1>ورود به سامانه</h1><p class="auth-intro">برای دسترسی به اطلاعات، وارد حساب کاربری خود شوید.</p>
+    <div id="login-notice" class="alert success" role="status" hidden></div>
+    <div id="login-error" class="alert error" role="alert" hidden></div>
+    <form id="login-form">
+      <div class="field"><label for="username">نام کاربری</label><input id="username" name="username" autocomplete="username" maxlength="64" dir="ltr" required autofocus autocapitalize="none" spellcheck="false"></div>
+      <div class="field"><label for="password">رمز عبور</label><div class="password-input"><input id="password" name="password" type="password" autocomplete="current-password" maxlength="128" dir="ltr" required><button id="toggle-password" type="button" aria-pressed="false">نمایش رمز</button></div></div>
+      <div class="field"><label for="captcha">کد امنیتی</label><div class="captcha-image-row"><img id="captcha-image" width="220" height="72" alt="کد امنیتی؛ پنج نویسهٔ داخل تصویر را وارد کنید"><button id="refresh-captcha" class="button secondary" type="button">تصویر جدید</button></div><input id="captcha" name="captcha" dir="ltr" maxlength="5" minlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="captcha-help" required><span id="captcha-help" class="field-help">پنج حرف یا عدد انگلیسی؛ بزرگی حروف مهم نیست. اعتبار تصویر دو دقیقه است.</span></div>
+      <button id="login-submit" class="button primary auth-submit" type="submit" disabled>ورود</button>
+    </form>
+    <p class="auth-footnote">پس از پایان کار، از حساب کاربری خارج شوید.</p>
+  </main>
+</body></html>

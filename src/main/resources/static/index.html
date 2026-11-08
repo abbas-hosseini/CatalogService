@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#123d46"><title>شایستگی | مدیریت سرمایه انسانی</title>
-  <link rel="stylesheet" href="/styles.css"><script src="/app.js" defer></script><script src="/employee-import.js" defer></script>
+  <link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/auth.css"><script src="/auth.js" defer></script><script src="/app.js" defer></script><script src="/employee-import.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">رفتن به محتوای اصلی</a>
@@ -13,7 +13,7 @@
     <div class="sidebar-note"><span class="note-dot"></span><div>هر شایستگی، یک فرصت<small>شناخت بهتر، توسعه هدفمند</small></div></div>
   </aside>
   <div class="workspace">
-    <header class="topbar"><div class="breadcrumb">مدیریت سرمایه انسانی <span>/</span> <strong id="breadcrumb">نمای کلی</strong></div><div class="topbar-end"><time id="today"></time><span class="workspace-badge">فضای مدیریت</span></div></header>
+    <header class="topbar"><div class="breadcrumb">مدیریت سرمایه انسانی <span>/</span> <strong id="breadcrumb">نمای کلی</strong></div><div class="topbar-end"><time id="today"></time><div class="user-controls"><a href="/account.html" id="my-account">پروفایل من</a><button id="logout-button" type="button">خروج</button></div></div></header>
     <main id="main" tabindex="-1">
       <div id="load-error" class="alert error" role="alert" hidden></div>
       <div class="page-header"><div><div class="eyebrow" id="eyebrow">سرمایه انسانی سازمان</div><h1 id="page-title">نمای کلی</h1><p id="page-description"></p></div><div class="page-actions"><button id="import-employees-button" class="button secondary" hidden>ورود از اکسل</button><button id="add-button" class="button primary" hidden></button></div></div>

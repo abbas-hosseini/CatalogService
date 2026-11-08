@@ -27,7 +27,7 @@ function renderEmployeeImport() {
 async function uploadEmployeeFile(file, commit) {
   const data=new FormData();data.append('file',file);
   let response;
-  try { response=await fetch(`/api/employees/import${commit?'':'/preview'}`,{method:'POST',body:data,headers:{Accept:'application/json'}}); }
+  try { response=await auth.request(`/api/employees/import${commit?'':'/preview'}`,{method:'POST',body:data,headers:{Accept:'application/json'}}); }
   catch { throw new Error(commit?'ارتباط قطع شد و نتیجهٔ ثبت مشخص نیست. فهرست کارمندان را تازه‌سازی کنید و سپس فایل را دوباره بررسی کنید.':'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.'); }
   const report=await response.json().catch(()=>({message:'پاسخ سرور قابل خواندن نیست. دوباره فایل را بررسی کنید.'}));
   if(!response.ok&&!(response.status===422&&Array.isArray(report.rows)))throw new Error(report.message||'بررسی فایل انجام نشد.');

@@ -9,6 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.context.annotation.Import;
+import com.example.webapp.security.SecurityTestConfiguration;
+import com.example.webapp.security.SecurityTestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -20,14 +23,17 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Import(SecurityTestConfiguration.class)
 class CatalogApiTests {
     @LocalServerPort int port;
     @Autowired JdbcTemplate jdbc;
-    final HttpClient http = HttpClient.newHttpClient();
+    HttpClient http;
+    String csrf;
     final JsonMapper json = JsonMapper.builder().build();
 
     @BeforeEach
-    void emptyDatabase() {
+    void emptyDatabase() throws Exception {
+        var session = SecurityTestClient.shared(port);http = session.http;csrf = session.csrf;
         for (String table : List.of("employee_positions", "employee_trainings", "employee_scores", "job_requirements", "employees", "courses"))
             jdbc.update("DELETE FROM " + table);
         jdbc.update("UPDATE evaluation_factors SET parent_id = NULL");
@@ -470,7 +476,7 @@ class CatalogApiTests {
         assertThat(response.statusCode()).as(method+" "+path+": "+response.body()).isEqualTo(expected);
     }
     HttpResponse<String> request(String method, String path, Object body) throws Exception {
-        var builder = HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/api/"+path)).header("Content-Type", "application/json");
+        var builder = HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/api/"+path)).header("Content-Type", "application/json").header("X-CSRF-TOKEN", csrf);
         builder.method(method, body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body)));
         return http.send(builder.build(), HttpResponse.BodyHandlers.ofString());
     }

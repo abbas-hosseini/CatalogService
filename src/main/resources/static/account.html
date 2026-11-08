@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>پروفایل کاربری | شایستگی</title><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/auth.css"><script src="/auth.js" defer></script><script src="/account.js" defer></script></head>
+<body class="account-page">
+  <header class="account-header"><a href="/" class="auth-brand"><span class="brand-symbol">ش</span><strong>شایستگی</strong></a><div class="page-actions"><a href="/" class="button secondary">بازگشت به سامانه</a><button id="account-logout" class="button secondary">خروج</button></div></header>
+  <main class="account-main"><div class="eyebrow">حساب کاربری</div><h1>پروفایل من</h1><p class="auth-intro">اطلاعات حساب و رمز ورود خود را مدیریت کنید.</p>
+    <div id="account-error" class="alert error" role="alert" hidden></div><div id="account-success" class="alert success" role="status" hidden></div>
+    <div class="account-grid">
+      <section class="account-card" aria-labelledby="account-details-title"><h2 id="account-details-title">اطلاعات کاربری</h2><form id="account-form">
+        <div class="field"><label for="account-username">نام کاربری</label><input id="account-username" dir="ltr" readonly><span class="field-help">نام کاربری از این صفحه تغییر نمی‌کند.</span></div>
+        <div class="field"><label for="display-name">نام نمایشی</label><input id="display-name" autocomplete="name" maxlength="120" required></div>
+        <div class="field"><label for="account-email">ایمیل (اختیاری)</label><input id="account-email" type="email" dir="ltr" autocomplete="email" maxlength="254"><span class="field-help">ایمیل فعلاً فقط در پروفایل ذخیره می‌شود.</span></div>
+        <button id="account-save" class="button primary" type="submit" disabled>ذخیره پروفایل</button>
+      </form></section>
+      <section class="account-card" aria-labelledby="password-title"><h2 id="password-title">تغییر رمز عبور</h2><p class="auth-intro">پس از تغییر رمز، ورود مجدد در همهٔ دستگاه‌ها لازم است.</p><form id="password-form">
+        <input id="password-username" name="username" autocomplete="username" hidden>
+        <div class="field"><label for="current-password">رمز فعلی</label><input id="current-password" type="password" autocomplete="current-password" maxlength="128" dir="ltr" required></div>
+        <div class="field"><label for="new-password">رمز جدید</label><input id="new-password" type="password" autocomplete="new-password" minlength="15" maxlength="128" dir="ltr" aria-describedby="password-rules" required></div>
+        <ul id="password-rules" class="password-rules" aria-label="شرایط رمز جدید"><li>۱۵ تا ۱۲۸ نویسه</li><li>حداقل یک حرف بزرگ انگلیسی</li><li>حداقل یک حرف کوچک انگلیسی</li><li>حداقل یک عدد انگلیسی</li><li>حداقل یک نشانه مانند ! یا @</li><li>فاقد نام کاربری، عبارت‌های رایج و نویسه‌های کنترلی</li></ul>
+        <div class="field"><label for="confirm-password">تکرار رمز جدید</label><input id="confirm-password" type="password" autocomplete="new-password" minlength="15" maxlength="128" dir="ltr" required></div>
+        <button id="password-save" class="button primary" type="submit" disabled>تغییر رمز عبور</button>
+      </form></section>
+    </div>
+  </main>
+</body></html>

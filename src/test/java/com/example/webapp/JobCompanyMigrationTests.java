@@ -23,7 +23,7 @@ class JobCompanyMigrationTests {
             statement.executeUpdate("INSERT INTO evaluation_factors (code, title) VALUES ('F', 'Factor')");
             statement.executeUpdate("INSERT INTO job_requirements (job_id, factor_id, minimum_score) VALUES (2, 1, 70)");
             statement.executeUpdate("INSERT INTO employee_positions (employee_id, company_id, job_id, notes) VALUES (1, 1, 2, 'Keep first'), (1, 2, 2, 'Keep second')");
-            var flyway = Flyway.configure().dataSource(url, "sa", "").load();
+            var flyway = Flyway.configure().dataSource(url, "sa", "").target("6").load();
             assertThat(flyway.migrate().migrationsExecuted).isEqualTo(1);
             try (var rows = statement.executeQuery("SELECT id, parent_id, company_id FROM jobs ORDER BY id")) {
                 assertThat(rows.next()).isTrue();

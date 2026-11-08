@@ -11,6 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.context.annotation.Import;
+import com.example.webapp.security.SecurityTestConfiguration;
+import com.example.webapp.security.SecurityTestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -23,15 +26,18 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Import(SecurityTestConfiguration.class)
 class EmployeeExcelImportTests {
     @LocalServerPort int port;
     @Autowired JdbcTemplate jdbc;
-    final HttpClient http = HttpClient.newHttpClient();
+    HttpClient http;
+    String csrf;
     final JsonMapper json = JsonMapper.builder().build();
     static final String[] HEADERS = {"کد پرسنلی", "نام", "نام خانوادگی", "مدرک تحصیلی", "تاریخ شروع به کار (شمسی)", "توضیحات"};
 
     @BeforeEach
-    void emptyEmployees() {
+    void emptyEmployees() throws Exception {
+        var session = SecurityTestClient.shared(port);http = session.http;csrf = session.csrf;
         for (String table : List.of("employee_positions", "employee_trainings", "employee_scores", "employees")) jdbc.update("DELETE FROM " + table);
     }
 
@@ -186,6 +192,7 @@ class EmployeeExcelImportTests {
         byte[] footer = ("\r\n--"+boundary+"--\r\n").getBytes(StandardCharsets.UTF_8);
         return http.send(HttpRequest.newBuilder(uri("/api/employees/import"+(preview?"/preview":"")))
             .header("Content-Type", "multipart/form-data; boundary="+boundary)
+            .header("X-CSRF-TOKEN", csrf)
             .POST(HttpRequest.BodyPublishers.concat(HttpRequest.BodyPublishers.ofByteArray(header), HttpRequest.BodyPublishers.ofByteArray(data), HttpRequest.BodyPublishers.ofByteArray(footer)))
             .build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
     }
