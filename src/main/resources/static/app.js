@@ -12,7 +12,8 @@ const paths = {
   requirements: '<path d="M9 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-4"/><rect x="9" y="2" width="6" height="5" rx="1"/><path d="m8 14 3 3 5-6"/>',
   plus: '<path d="M12 5v14M5 12h14"/>', search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
   arrow: '<path d="M20 12H4m6-6-6 6 6 6"/>', info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/>',
-  folder: '<path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'
+  folder: '<path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  security: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>'
 };
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.folder}</svg>`;
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -47,7 +48,7 @@ const sections = {
   scores: {title:'نمرات شایستگی',singular:'نمره شایستگی',description:'نمره جاری هر کارمند را برای عوامل ارزشیابی، به‌صورت دستی از ۱۰۰ ثبت کنید.',filter:'employeeId',filterRef:'employees',fields:[refField('employeeId','کارمند','employees'),refField('factorId','عامل ارزشیابی','factors'),scoreField('score','نمره شایستگی'),dateField('assessedOn','تاریخ ارزشیابی (میلادی)'),notesField],columns:[['employeeId','کارمند','employees'],['factorId','عامل ارزشیابی','factors'],['score','نمره از ۱۰۰'],['assessedOn','تاریخ ارزشیابی']]},
   requirements: {title:'شرایط احراز شغل',singular:'شرط احراز',fields:[refField('factorId','عامل ارزشیابی','factors'),scoreField('minimumScore','حداقل نمره لازم'),notesField],columns:[['factorId','عامل ارزشیابی','factors'],['minimumScore','حداقل نمره از ۱۰۰'],['notes','یادداشت']]}
 };
-const state = {section:'dashboard',data:{},search:'',filter:'',page:1,pageSize:12,editing:null,deleting:null,jobId:null,profileId:null,scoreSheet:null,ready:false,busy:false};
+const state = {section:'dashboard',data:{},search:'',filter:'',page:1,pageSize:12,editing:null,deleting:null,jobId:null,profileId:null,scoreSheet:null,ready:false,busy:false,permissions:[]};
 const $ = id => document.getElementById(id);
 let toastTimer;
 
@@ -81,7 +82,9 @@ async function loadData() {
 }
 function renderNavigation() {
   const link=(key,title)=>`<a href="#${key}" class="nav-link ${state.section===key?'active':''}" ${state.section===key?'aria-current="page"':''}>${icon(key)}<span>${title}</span></a>`;
-  $('navigation').innerHTML=link('dashboard','نمای کلی')+'<div class="nav-heading">اطلاعات پایه</div>'+['companies','factors','jobs','employees','courses'].map(k=>link(k,sections[k].title)).join('')+'<div class="nav-heading">پرونده کارکنان</div>'+['scores','trainings'].map(k=>link(k,sections[k].title)).join('');
+  let html=link('dashboard','نمای کلی')+'<div class="nav-heading">اطلاعات پایه</div>'+['companies','factors','jobs','employees','courses'].map(k=>link(k,sections[k].title)).join('')+'<div class="nav-heading">پرونده کارکنان</div>'+['scores','trainings'].map(k=>link(k,sections[k].title)).join('');
+  if(state.permissions.includes('security.manage')) html+='<div class="nav-heading">مدیریت</div><a href="/access.html" class="nav-link">'+icon('security')+'<span>کاربران و نقش‌ها</span></a>';
+  $('navigation').innerHTML=html;
 }
 function render() {
   if(state.ready && $('job-dialog').open) renderJobRequirements();
@@ -450,7 +453,7 @@ function navigate(){
   state.section=Object.hasOwn(sections,key)?key:'dashboard';
   state.search='';state.filter='';state.page=1;render();
 }
-async function initialize(){try{const user=await auth.json('/api/account');$('my-account').textContent=user.displayName||'پروفایل من';await auth.csrf();await loadData();navigate();}catch(error){showLoadError(error.message);render();}}
+async function initialize(){try{const user=await auth.json('/api/account');$('my-account').textContent=user.displayName||'پروفایل من';const me=await auth.json('/api/access/me');state.permissions=me.permissions||[];await auth.csrf();await loadData();navigate();}catch(error){showLoadError(error.message);render();}}
 $('logout-button').onclick=async()=>{if(state.busy)return;state.busy=true;try{await auth.logout();}catch(error){toast(error.message);state.busy=false;}};
 $('today').textContent=new Intl.DateTimeFormat('fa-IR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
 $('add-button').onclick=()=>openForm();$('record-form').addEventListener('submit',saveForm);$('confirm-delete').onclick=confirmDelete;
