@@ -7,6 +7,8 @@ public enum Catalog {
     FACTORS("factors", "evaluation_factors"),
     JOBS("jobs", "jobs"),
     COMPANIES("companies", "companies"),
+    SPECIALITIES("specialities", "specialities"),
+    ORGANIZATIONAL_LEVELS("organizational-levels", "organizational_levels"),
     EMPLOYEES("employees", "employees"),
     POSITIONS("positions", "employee_positions"),
     COURSES("courses", "courses"),

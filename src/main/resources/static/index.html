@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#123d46"><title>شایستگی | مدیریت سرمایه انسانی</title>
-  <link rel="preload" href="/fonts/vazirmatn/Vazirmatn-Variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/auth.css"><link rel="stylesheet" href="/employee.css"><script src="/auth.js" defer></script><script src="/employee-fields.js" defer></script><script src="/app.js" defer></script><script src="/employee-import.js" defer></script>
+  <link rel="preload" href="/fonts/vazirmatn/Vazirmatn-Variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/auth.css"><link rel="stylesheet" href="/employee.css"><link rel="stylesheet" href="/assessment.css"><link rel="stylesheet" href="/training.css?v=20261117"><script src="/auth.js" defer></script><script src="/employee-fields.js?v=20261117-references" defer></script><script src="/app.js?v=20261117-references" defer></script><script src="/employee-import.js" defer></script><script src="/assessment-details.js" defer></script><script src="/training-record.js?v=20261117" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">رفتن به محتوای اصلی</a>
@@ -27,7 +27,12 @@
   </dialog>
   <dialog id="record-dialog" aria-labelledby="dialog-title">
     <div class="dialog-header"><div><div class="eyebrow">مدیریت اطلاعات</div><h2 id="dialog-title"></h2></div><button type="button" class="icon-button close-dialog" aria-label="بستن فرم">×</button></div>
-    <form id="record-form"><div class="dialog-body"><p id="form-context" class="profile-summary" hidden></p><p id="form-hint" class="form-hint">فیلدهای ستاره‌دار الزامی هستند.</p><div id="form-error" class="alert error" role="alert" hidden></div><div id="form-fields" class="form-grid"></div></div>
+    <form id="record-form"><div class="dialog-body"><p id="form-context" class="profile-summary" hidden></p><p id="form-hint" class="form-hint">فیلدهای ستاره‌دار الزامی هستند.</p><div id="form-error" class="alert error" role="alert" hidden></div><div id="form-fields" class="form-grid"></div><section id="training-files-section" class="training-attachments-section" aria-labelledby="training-files-title" hidden>
+        <div class="section-heading"><h3 id="training-files-title">پیوست‌های سابقهٔ آموزشی</h3><span id="training-file-count" role="status"></span></div>
+        <div id="training-files-error" class="alert error" role="alert" hidden></div><button type="button" class="button secondary" id="training-files-retry" hidden>تلاش دوباره برای دریافت پیوست‌ها</button>
+        <div id="training-upload" class="field"><label for="training-files">افزودن فایل‌ها</label><input id="training-files" type="file" multiple aria-describedby="training-files-help"><span id="training-files-help" class="field-help">تا ۱۰ فایل، هر فایل حداکثر ۵ مگابایت. می‌توانید هم‌زمان چند فایل انتخاب کنید یا در چند مرحله فایل اضافه کنید. افزودن و حذف پیوست‌ها همراه با ذخیرهٔ سابقه اعمال می‌شود.</span></div>
+        <div id="training-attachments"></div>
+      </section></div>
       <div class="dialog-footer"><button type="submit" class="button primary" id="save-button">ذخیره اطلاعات</button><button type="button" class="button secondary close-dialog">انصراف</button></div>
     </form>
   </dialog>
@@ -48,9 +53,32 @@
           <div class="toolbar"><label class="search-box"><input id="score-sheet-search" type="search" placeholder="جست‌وجوی شایستگی یا کد…" aria-label="جست‌وجوی شایستگی در جدول نمرات"></label><span id="score-sheet-progress" class="record-count" role="status"></span></div>
           <div id="score-sheet-table"></div>
         </div>
-        <p class="score-sheet-note">خانهٔ خالی یعنی بدون نمره؛ با پاک‌کردن نمرهٔ قبلی و ذخیره، آن نمره حذف می‌شود. نمرهٔ صفر با خانهٔ خالی متفاوت است.</p>
+        <p class="score-sheet-note">خانهٔ خالی یعنی بدون نمره؛ با پاک‌کردن نمرهٔ قبلی و ذخیره، آن نمره همراه با جزئیات و همهٔ پیوست‌های ارزیابی حذف می‌شود. برای افزودن جزئیات به نمرهٔ جدید، ابتدا نمره را ذخیره کنید. نمرهٔ صفر با خانهٔ خالی متفاوت است.</p>
       </div>
       <div class="dialog-footer"><button type="submit" class="button primary" id="score-sheet-save">ذخیره نمرات</button><button type="button" class="button secondary" data-close="score-sheet-dialog">انصراف</button></div>
+    </form>
+  </dialog>
+  <dialog id="assessment-dialog" class="assessment-dialog" aria-labelledby="assessment-title">
+    <div class="dialog-header"><div><div class="eyebrow">سابقهٔ ارزیابی</div><h2 id="assessment-title">جزئیات و پیوست‌ها</h2></div><button type="button" class="icon-button" data-assessment-close aria-label="بستن جزئیات ارزیابی">×</button></div>
+    <form id="assessment-form" novalidate>
+      <div class="dialog-body">
+        <p id="assessment-summary" class="muted assessment-summary"></p>
+        <p id="assessment-loading" class="muted" role="status">در حال دریافت اطلاعات…</p>
+        <div id="assessment-error" class="alert error" role="alert" hidden></div>
+        <div id="assessment-content" hidden>
+          <div class="form-grid">
+            <div class="field"><label for="assessment-strengths">نقاط قوت</label><textarea id="assessment-strengths" maxlength="5000" aria-describedby="assessment-strengths-error" placeholder="نقاط قوت این ارزیابی را بنویسید…"></textarea><span class="field-help">اختیاری؛ حداکثر ۵۰۰۰ کاراکتر</span><span class="field-error" id="assessment-strengths-error"></span></div>
+            <div class="field"><label for="assessment-weaknesses">نقاط ضعف</label><textarea id="assessment-weaknesses" maxlength="5000" aria-describedby="assessment-weaknesses-error" placeholder="نقاط ضعف این ارزیابی را بنویسید…"></textarea><span class="field-help">اختیاری؛ حداکثر ۵۰۰۰ کاراکتر</span><span class="field-error" id="assessment-weaknesses-error"></span></div>
+            <div class="field full"><label for="assessment-notes">یادداشت</label><textarea id="assessment-notes" maxlength="2000" aria-describedby="assessment-notes-error"></textarea><span class="field-error" id="assessment-notes-error"></span></div>
+          </div>
+          <section class="assessment-attachment-section" aria-labelledby="assessment-files-title">
+            <div class="section-heading"><h3 id="assessment-files-title">پیوست‌های ارزیابی</h3><span id="assessment-file-count" role="status"></span></div>
+            <div id="assessment-upload" class="field"><label for="assessment-files">افزودن فایل‌ها</label><input id="assessment-files" type="file" multiple aria-describedby="assessment-files-help"><span id="assessment-files-help" class="field-help">حداکثر ۱۰ پیوست، هر فایل تا ۵ مگابایت. می‌توانید چند فایل انتخاب کنید یا در چند مرحله فایل اضافه کنید. افزودن و حذف پیوست‌ها پس از زدن دکمهٔ ذخیره اعمال می‌شود.</span></div>
+            <div id="assessment-attachments"></div>
+          </section>
+        </div>
+      </div>
+      <div class="dialog-footer"><button type="submit" id="assessment-save" class="button primary">ذخیره جزئیات و پیوست‌ها</button><button type="button" class="button secondary" data-assessment-close>بستن</button></div>
     </form>
   </dialog>
   <dialog id="employee-import-dialog" class="employee-import-dialog" aria-labelledby="employee-import-title">
@@ -59,7 +87,7 @@
       <p class="form-hint">۱. قالب را دریافت و تکمیل کنید. ۲. فایل را بررسی کنید. ۳. پس از بررسی پیش‌نمایش، ثبت را تأیید کنید.</p>
       <a class="button secondary" href="/templates/employees-import.xlsx" download>دریافت قالب اکسل</a>
       <p class="import-guide">فقط برگهٔ اول خوانده می‌شود. کد پرسنلی، نام و نام خانوادگی الزامی‌اند؛ بقیهٔ ستون‌ها اختیاری‌اند و فایل‌های قبلی نیز پذیرفته می‌شوند. تاریخ تولد، شروع به کار و استخدام را به‌صورت متن شمسی مانند ۱۴۰۳/۰۱/۰۱ وارد کنید. برای حفظ صفرهای ابتدای کد، قالب سلول را Text قرار دهید.</p>
-      <p class="import-guide">مدرک تحصیلی، جنسیت و آخرین درجه دریایی را از فهرست‌های قالب انتخاب کنید. سابقه دریایی (سال) و مقطع تحصیلی، مطابق فرم کارمند، عدد بین ۰ و ۱۰۰ با حداکثر دو رقم اعشار هستند. راهنمای همهٔ ستون‌ها در برگهٔ «راهنما» آمده است.</p>
+      <p class="import-guide">مدرک تحصیلی، جنسیت و آخرین درجه دریایی را از فهرست‌های قالب انتخاب کنید. تخصص و سطح سازمانی را از گزینه‌های اطلاعات پایه در قالب انتخاب کنید؛ کد یا عنوان دقیق گزینه نیز پذیرفته می‌شود. پس از تغییر اطلاعات پایه، قالب تازه دریافت کنید. سابقه دریایی (سال) عدد بین ۰ و ۱۰۰ با حداکثر دو رقم اعشار است. راهنمای همهٔ ستون‌ها در برگهٔ «راهنما» آمده است.</p>
       <div class="field"><label for="employee-import-file">فایل اکسل</label><input id="employee-import-file" type="file" accept=".xlsx,.xls" aria-describedby="employee-import-help"><span class="field-help" id="employee-import-help">xlsx یا xls، حداکثر ۵ مگابایت و ۱۰۰۰ ردیف اطلاعات.</span></div>
       <p class="import-guide">این بخش کارمندان جدید را ثبت می‌کند. کدهای تکراری و ردیف‌های نامعتبر باید در فایل اصلاح شوند؛ تا رفع همهٔ خطاها هیچ ردیفی ذخیره نمی‌شود. سمت‌های هر فرد را پس از ورود، در پروندهٔ او تعیین کنید.</p>
       <div id="employee-import-error" class="alert error" role="alert" hidden></div>

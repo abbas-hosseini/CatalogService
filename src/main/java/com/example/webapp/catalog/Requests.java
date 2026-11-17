@@ -7,6 +7,7 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import tools.jackson.databind.annotation.JsonDeserialize;
 
 public final class Requests {
     private Requests() {}
@@ -39,8 +40,8 @@ public final class Requests {
         @Size(max = 200) String masterUniversity,
         @Size(max = 200) String doctoralMajor,
         @Size(max = 200) String doctoralUniversity,
-        @Size(max = 200) String speciality,
-        @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal grade,
+        @Positive @JsonDeserialize(using = ReferenceIdDeserializer.class) Long specialityId,
+        @Positive @JsonDeserialize(using = ReferenceIdDeserializer.class) Long grade,
         @JalaliDate String hireDate,
         @Pattern(regexp = "DRYASALAR|AMIRNEMAT|DRYADAR|DRYANAVARD|NAKHDA_BANI|NAKHDA_DOUM|NAKHDA_SOOM|NAKHDA_CHAHARUM|NAKHDA_PANJUM|NAKHDA_SHESHUM|NAKHDA_HAFTUM|NAKHDA_HASHTUM|NAKHDA_NOHUM|NAKHDA_DAHUM|NAKHDA_YAZDAHUM|NAKHDA_DOVAZHDAHUM|NAKHDA_SEYAZDAHUM") String lastMarineRank,
         @Size(max = 2000) String description) {
@@ -54,6 +55,11 @@ public final class Requests {
     public record Company(
         @NotBlank @Size(max = 40) String code,
         @NotBlank @Size(max = 160) String title,
+        @Size(max = 2000) String description) {}
+
+    public record ReferenceItem(
+        @NotBlank @Size(max = 40) String code,
+        @NotBlank @Size(max = 200) String title,
         @Size(max = 2000) String description) {}
 
     public record EmployeePosition(
@@ -76,7 +82,9 @@ public final class Requests {
         @NotNull @PastOrPresent LocalDate completionDate,
         @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal score,
         @Size(max = 100) String certificateNumber,
-        @Size(max = 2000) String notes) {}
+        @Size(max = 2000) String notes,
+        @PastOrPresent LocalDate startDate,
+        @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal impactCoefficient) {}
 
     public record EmployeeScore(
         @NotNull @Positive Long employeeId,

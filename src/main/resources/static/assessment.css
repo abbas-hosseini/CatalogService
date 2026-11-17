@@ -1,0 +1,15 @@
+.assessment-dialog{width:min(900px,calc(100vw - 32px))}
+.assessment-dialog .dialog-footer{position:sticky;bottom:0;z-index:2;flex-wrap:wrap}
+.assessment-dialog textarea{min-height:140px;resize:vertical;white-space:pre-wrap}
+.assessment-dialog textarea[readonly]{background:#f8fafb}
+.assessment-summary{margin-bottom:20px;line-height:2}
+.assessment-attachment-section{margin-top:24px;border-top:1px solid var(--line);padding-top:20px}
+.assessment-files{list-style:none;padding:0;margin:16px 0;display:grid;gap:8px}
+.assessment-files li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border:1px solid var(--line);border-radius:10px}
+.assessment-files li>div{min-width:0;overflow-wrap:anywhere}
+.assessment-files small{display:block;color:var(--muted)}
+.assessment-files a{color:var(--teal);text-decoration:underline;text-underline-offset:3px}
+.assessment-file-removed{background:#fff8f6}
+.assessment-file-removed a{text-decoration:line-through}
+.assessment-dialog .field-help{line-height:2}
+@media(max-width:650px){.assessment-dialog .form-grid{grid-template-columns:1fr}.assessment-dialog .dialog-body{padding:18px}.assessment-files li{align-items:flex-start}}

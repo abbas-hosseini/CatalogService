@@ -40,14 +40,21 @@ class EmployeeExcelImportTests {
         "doctoralMajor", "doctoralUniversity", "speciality", "grade", "hireDate", "lastMarineRank", "description"};
     static final String[] PROFILE_PERSIAN_HEADERS = {"کد پرسنلی", "نام", "نام خانوادگی", "مدرک تحصیلی", "تاریخ شروع به کار (شمسی)",
         "تاریخ تولد (شمسی)", "سابقه دریایی (سال)", "جنسیت", "رشته کارشناسی", "دانشگاه کارشناسی", "رشته کارشناسی ارشد", "دانشگاه کارشناسی ارشد",
-        "رشته دکتری", "دانشگاه دکتری", "تخصص", "مقطع تحصیلی", "تاریخ استخدام (شمسی)", "آخرین درجه دریایی", "توضیحات"};
+        "رشته دکتری", "دانشگاه دکتری", "تخصص", "سطح سازمانی", "تاریخ استخدام (شمسی)", "آخرین درجه دریایی", "توضیحات"};
     static final Object[] PROFILE_VALUES = {"00042", "علی", "رضایی", "doctorate", "۱۴۰۳/۱/۱", "١٣٧٠/١/٢", 12.5, "زن",
-        "مهندسی دریا", "دانشگاه اول", "مدیریت", "دانشگاه دوم", "حمل و نقل", "دانشگاه سوم", "  مدیریت دریایی  ", "٠٫٠٠", "۱۳۹۹/۱۲/۳۰", "nakhda_bani", "توضیحات کامل"};
+        "مهندسی دریا", "دانشگاه اول", "مدیریت", "دانشگاه دوم", "حمل و نقل", "دانشگاه سوم", "  مدیریت دریایی  ", "LEVEL-01", "۱۳۹۹/۱۲/۳۰", "nakhda_bani", "توضیحات کامل"};
+
+    long specialityId, gradeId;
 
     @BeforeEach
     void emptyEmployees() throws Exception {
         var session = SecurityTestClient.shared(port);http = session.http;csrf = session.csrf;
         for (String table : List.of("employee_positions", "employee_trainings", "employee_scores", "employees")) jdbc.update("DELETE FROM " + table);
+        jdbc.update("DELETE FROM specialities");jdbc.update("DELETE FROM organizational_levels");
+        jdbc.update("INSERT INTO specialities(code,title) VALUES ('MARINE','مدیریت دریایی')");
+        jdbc.update("INSERT INTO organizational_levels(code,title) VALUES ('LEVEL-01','کارشناس')");
+        specialityId = jdbc.queryForObject("SELECT id FROM specialities", Long.class);
+        gradeId = jdbc.queryForObject("SELECT id FROM organizational_levels", Long.class);
     }
 
     @Test
@@ -189,10 +196,14 @@ class EmployeeExcelImportTests {
             assertThat(workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue()).isEqualTo(HEADERS[0]);
             Sheet sheet = workbook.getSheetAt(0);
             assertThat(sheet.getRow(0).getLastCellNum()).isEqualTo((short) 19);
-            assertThat(sheet.getDataValidations()).hasSize(5);
+            assertThat(sheet.getDataValidations()).hasSize(6);
             assertThat(workbook.getNumberOfSheets()).isEqualTo(3);
             assertThat(workbook.isSheetHidden(2)).isTrue();
             assertThat(workbook.getName("MarineRanks").getRefersToFormula()).isEqualTo("'گزینه‌ها'!$A$2:$A$18");
+            assertThat(workbook.getName("Specialities").getRefersToFormula()).isEqualTo("'گزینه‌ها'!$B$2:$B$2");
+            assertThat(workbook.getName("OrganizationalLevels").getRefersToFormula()).isEqualTo("'گزینه‌ها'!$C$2:$C$2");
+            assertThat(workbook.getSheet("گزینه‌ها").getRow(1).getCell(1).getStringCellValue()).isEqualTo("MARINE — مدیریت دریایی");
+            assertThat(workbook.getSheet("گزینه‌ها").getRow(1).getCell(2).getStringCellValue()).isEqualTo("LEVEL-01 — کارشناس");
         }
         assertThat(upload(response.body(), "template.xlsx", false).statusCode()).isEqualTo(400);
         assertThat(count()).isZero();
@@ -242,7 +253,7 @@ class EmployeeExcelImportTests {
     @ParameterizedTest
     @CsvSource({"birthDate,1404/12/30,تاریخ تولد", "hireDate,1404/07/31,تاریخ استخدام",
         "marineExperience,-0.01,سابقه دریایی", "marineExperience,100.01,سابقه دریایی", "marineExperience,۱۲٫۵۶۷,سابقه دریایی",
-        "grade,not-a-number,مقطع تحصیلی", "grade,۱۰۱,مقطع تحصیلی", "grade,1.234,مقطع تحصیلی",
+        "grade,not-defined,سطح سازمانی", "grade,۱۰۱,سطح سازمانی", "grade,1.234,سطح سازمانی",
         "gender,OTHER,جنسیت", "lastMarineRank,UNKNOWN,آخرین درجه دریایی"})
     void invalidProfileFieldReportsItsRowAndPreventsTheEntireImport(String field, String value, String label) throws Exception {
         try (Workbook workbook = new XSSFWorkbook()) {
@@ -291,12 +302,58 @@ class EmployeeExcelImportTests {
         assertThat(jdbc.queryForObject("SELECT hire_date FROM employees", java.sql.Date.class).toLocalDate().toString()).isEqualTo("2021-03-20");
     }
 
+    @Test void resolvesReferenceCodesTitlesAndChoicesAndRevalidatesDeletedChoicesAtImportTime() throws Exception {
+        for (String speciality : List.of("MARINE", "مدیریت دریایی", "MARINE — مدیریت دریایی")) {
+            try (Workbook workbook = new XSSFWorkbook()) {
+                var sheet = workbook.createSheet();headers(sheet,"personnelCode","firstName","lastName","speciality","grade");
+                var row = sheet.createRow(1);
+                for (int i=0;i<5;i++) row.createCell(i).setCellValue(new String[]{"REF-1","نام","خانوادگی",speciality,"LEVEL-01 — کارشناس"}[i]);
+                var response=upload(bytes(workbook),"refs.xlsx",true);
+                assertThat(response.statusCode()).isEqualTo(200);
+                var report=json.readTree(response.body());assertThat(report.get("errorCount").asInt()).isZero();
+                assertThat(report.get("rows").get(0).get("employee").get("specialityId").asLong()).isEqualTo(specialityId);
+                assertThat(report.get("rows").get(0).get("employee").get("grade").asLong()).isEqualTo(gradeId);
+            }
+        }
+        try (Workbook workbook = new XSSFWorkbook()) {
+            var sheet=workbook.createSheet();headers(sheet,"personnelCode","firstName","lastName","speciality","grade");
+            var row=sheet.createRow(1);
+            for(int i=0;i<5;i++) row.createCell(i).setCellValue(new String[]{"REF-2","نام","خانوادگی","MARINE","LEVEL-01"}[i]);
+            byte[] file=bytes(workbook);
+            assertThat(json.readTree(upload(file,"refs.xlsx",true).body()).get("errorCount").asInt()).isZero();
+            jdbc.update("DELETE FROM specialities");
+            var response=upload(file,"refs.xlsx",false);assertThat(response.statusCode()).isEqualTo(422);
+            assertThat(response.body()).contains("تخصص", "تعریف نشده");assertThat(count()).isZero();
+        }
+    }
+
+    @Test void ambiguousReferenceNamesRequireTheFullChoiceAndEmptyCatalogTemplateRemainsValid() throws Exception {
+        jdbc.update("INSERT INTO specialities(code,title) VALUES ('OTHER','MARINE')");
+        try (Workbook workbook = new XSSFWorkbook()) {
+            var sheet=workbook.createSheet();headers(sheet,"personnelCode","firstName","lastName","speciality");
+            var row=sheet.createRow(1);
+            for(int i=0;i<4;i++) row.createCell(i).setCellValue(new String[]{"AMB-1","نام","خانوادگی","MARINE"}[i]);
+            var ambiguous=upload(bytes(workbook),"ambiguous.xlsx",true);
+            assertThat(json.readTree(ambiguous.body()).get("errorCount").asInt()).isEqualTo(1);
+            row.getCell(3).setCellValue("MARINE — مدیریت دریایی");
+            assertThat(json.readTree(upload(bytes(workbook),"ambiguous.xlsx",true).body()).get("errorCount").asInt()).isZero();
+        }
+        jdbc.update("DELETE FROM specialities");jdbc.update("DELETE FROM organizational_levels");
+        var response=http.send(HttpRequest.newBuilder(uri("/templates/employees-import.xlsx")).GET().build(),HttpResponse.BodyHandlers.ofByteArray());
+        assertThat(response.statusCode()).isEqualTo(200);
+        try(var workbook=WorkbookFactory.create(new java.io.ByteArrayInputStream(response.body()))) {
+            assertThat(workbook.getName("Specialities").getRefersToFormula()).doesNotContain("$1:");
+            assertThat(workbook.getSheetAt(0).getDataValidations()).hasSize(6);
+        }
+    }
+
     private void assertProfile(JsonNode employee) {
         for (int i = 0; i < PROFILE_HEADERS.length; i++) {
             String field = PROFILE_HEADERS[i];
             switch (field) {
                 case "marineExperience" -> assertThat(employee.get(field).asDouble()).isEqualTo(12.5);
-                case "grade" -> assertThat(employee.get(field).asDouble()).isZero();
+                case "grade" -> assertThat(employee.get(field).asLong()).isEqualTo(gradeId);
+                case "speciality" -> assertThat(employee.get("specialityId").asLong()).isEqualTo(specialityId);
                 case "startDate" -> assertThat(employee.get(field).asText()).isEqualTo("1403-01-01");
                 case "birthDate" -> assertThat(employee.get(field).asText()).isEqualTo("1370-01-02");
                 case "hireDate" -> assertThat(employee.get(field).asText()).isEqualTo("1399-12-30");

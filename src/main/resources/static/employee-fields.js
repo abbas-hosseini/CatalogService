@@ -18,11 +18,11 @@ function employeeFormFields() {
     field('birthDate','تاریخ تولد (شمسی)','jalali'),
     field('startDate','تاریخ شروع به کار (شمسی)','jalali',{group:'اطلاعات شغلی و دریایی'}),
     field('hireDate','تاریخ استخدام (شمسی)','jalali'),
-    field('speciality','تخصص','text',{max:200}),
+    refField('specialityId','تخصص','specialities',false),
+    refField('grade','سطح سازمانی','organizational-levels',false),
     field('marineExperience','سابقه دریایی (سال)','decimal',{min:0,max:100,placeholder:'مثلاً ۱۲٫۵'}),
     field('lastMarineRank','آخرین درجه دریایی','choice',{choices:employeeMarineRanks}),
     field('educationLevel','مدرک تحصیلی','choice',{choices:educationLevels,group:'تحصیلات'}),
-    field('grade','مقطع تحصیلی','decimal',{min:0,max:100,placeholder:'۰ تا ۱۰۰'}),
     field('bachelorMajor','رشته کارشناسی','text',{max:200}),
     field('bachelorUniversity','دانشگاه کارشناسی','text',{max:200}),
     field('masterMajor','رشته کارشناسی ارشد','text',{max:200}),
@@ -36,6 +36,7 @@ function employeeFormFields() {
 function employeeValue(field, value) {
   if(value==null||value==='')return 'ثبت نشده';
   if(field.type==='choice')return field.choices[value]||value;
+  if(field.type==='select')return label(field.ref,value)||'گزینه نامشخص';
   if(field.type==='jalali')return jalaliDate(value);
   if(field.type==='decimal')return number(value);
   return String(value);

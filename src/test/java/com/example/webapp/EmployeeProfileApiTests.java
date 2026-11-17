@@ -5,6 +5,7 @@ import com.example.webapp.security.SecurityTestConfiguration;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -21,7 +22,16 @@ class EmployeeProfileApiTests {
     @LocalServerPort int port;
     @Autowired JdbcTemplate jdbc;
     SecurityTestClient client;
-    @BeforeEach void prepare() throws Exception { client = SecurityTestClient.shared(port); }
+    long specialityId, gradeId, otherGradeId;
+    @BeforeEach void prepare() throws Exception {
+        client = SecurityTestClient.shared(port);
+        specialityId = reference("specialities");gradeId = reference("organizational-levels");otherGradeId = reference("organizational-levels");
+    }
+    long reference(String catalog) throws Exception {
+        var response = client.write("POST", "/api/" + catalog, Map.of("code", UUID.randomUUID().toString(), "title", UUID.randomUUID().toString()), true);
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(201);
+        return client.json.readTree(response.body()).get("id").asLong();
+    }
 
     Map<String, Object> employee() {
         var body = new LinkedHashMap<String, Object>();
@@ -41,7 +51,7 @@ class EmployeeProfileApiTests {
     @Test void allProfileFieldsRoundTripNormalizeDatesAndCanBeEditedAndCleared() throws Exception {
         var body = employee();
         body.putAll(Map.of("educationLevel","DOCTORATE","startDate","۱۴۰۳/۰۱/۰۱","birthDate","١٣٧٠/١/٢","hireDate","۱۳۹۹/۱۲/۳۰",
-            "marineExperience",12.5,"gender","FEMALE","speciality","  مدیریت دریایی  ","grade",0,"lastMarineRank","NAKHDA_BANI"));
+            "marineExperience",12.5,"gender","FEMALE","specialityId",specialityId,"grade",gradeId,"lastMarineRank","NAKHDA_BANI"));
         body.putAll(Map.of("bachelorMajor","مهندسی","bachelorUniversity","دانشگاه اول","masterMajor","مدیریت","masterUniversity","دانشگاه دوم",
             "doctoralMajor","حمل و نقل","doctoralUniversity","دانشگاه سوم","description","توضیحات کامل"));
         long id = create(body);
@@ -51,22 +61,22 @@ class EmployeeProfileApiTests {
         assertThat(row.get("startDate").asText()).isEqualTo("1403-01-01");
         assertThat(jdbc.queryForObject("SELECT hire_date FROM employees WHERE id = ?", java.sql.Date.class, id).toLocalDate().toString()).isEqualTo("2021-03-20");
         assertThat(row.get("marineExperience").asDouble()).isEqualTo(12.5);
-        assertThat(row.get("grade").asDouble()).isZero();
-        assertThat(row.get("speciality").asText()).isEqualTo("مدیریت دریایی");
+        assertThat(row.get("grade").asLong()).isEqualTo(gradeId);
+        assertThat(row.get("specialityId").asLong()).isEqualTo(specialityId);
         for (String key : List.of("gender","lastMarineRank","bachelorMajor","bachelorUniversity","masterMajor","masterUniversity","doctoralMajor","doctoralUniversity","description"))
             assertThat(row.get(key).asText()).isEqualTo(body.get(key));
-        body.put("birthDate","۱۳۷۱/۰۶/۳۱");body.put("hireDate","۱۴۰۰/۱/۱");body.put("marineExperience",0);body.put("grade",99.75);
+        body.put("birthDate","۱۳۷۱/۰۶/۳۱");body.put("hireDate","۱۴۰۰/۱/۱");body.put("marineExperience",0);body.put("grade",otherGradeId);
         assertThat(client.write("PUT","/api/employees/"+id,body,true).statusCode()).isEqualTo(200);
         row = read(id);assertThat(row.get("birthDate").asText()).isEqualTo("1371-06-31");
         assertThat(row.get("hireDate").asText()).isEqualTo("1400-01-01");assertThat(row.get("marineExperience").asDouble()).isZero();
-        assertThat(row.get("grade").asDouble()).isEqualTo(99.75);
+        assertThat(row.get("grade").asLong()).isEqualTo(otherGradeId);
         for (String key : new ArrayList<>(body.keySet())) if (!Set.of("personnelCode","firstName","lastName").contains(key)) body.put(key,null);
         assertThat(client.write("PUT","/api/employees/"+id,body,true).statusCode()).isEqualTo(200);
         row = read(id);
         for (String key : body.keySet()) if (body.get(key) == null) assertThat(row.get(key).isNull()).as(key).isTrue();
     }
     @ParameterizedTest
-    @CsvSource({"birthDate,1404-12-30", "hireDate,1404-07-31", "marineExperience,-0.01", "marineExperience,100.01", "grade,1.234", "grade,101", "gender,OTHER", "lastMarineRank,UNKNOWN"})
+    @CsvSource({"birthDate,1404-12-30", "hireDate,1404-07-31", "marineExperience,-0.01", "marineExperience,100.01", "grade,0", "specialityId,-1", "gender,OTHER", "lastMarineRank,UNKNOWN"})
     void rejectsInvalidNewFieldsWithoutInserting(String field, String value) throws Exception {
         var body = employee();body.put(field,value);
         var response = client.write("POST","/api/employees",body,true);
@@ -82,5 +92,28 @@ class EmployeeProfileApiTests {
         assertThat(response.statusCode()).isEqualTo(400);
         assertThat(client.json.readTree(response.body()).get("fields").has("masterUniversity")).isTrue();
         assertThat(read(id).get("masterUniversity").isNull()).isTrue();
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"specialities", "organizational-levels"})
+    void referenceCrudEnforcesUniquenessReferencesAndPreservesEmployeeLinksOnRename(String catalog) throws Exception {
+        long ref = reference(catalog);String field = catalog.equals("specialities") ? "specialityId" : "grade";
+        var body = employee();body.put(field, ref);long employeeId = create(body);
+        String code = UUID.randomUUID().toString(), title = "گزینه " + UUID.randomUUID();
+        assertThat(client.write("PUT", "/api/" + catalog + "/" + ref, Map.of("code",code,"title",title),true).statusCode()).isEqualTo(200);
+        assertThat(read(employeeId).get(field).asLong()).isEqualTo(ref);
+        assertThat(client.get("/api/" + catalog).body()).contains(title);
+        assertThat(client.write("POST", "/api/" + catalog, Map.of("code",code,"title","another"),true).statusCode()).isEqualTo(409);
+        assertThat(client.write("POST", "/api/" + catalog, Map.of("code","another","title",title),true).statusCode()).isEqualTo(409);
+        assertThat(client.write("POST", "/api/" + catalog, Map.of("code"," ","title"," "),true).statusCode()).isEqualTo(400);
+        assertThat(client.write("DELETE", "/api/" + catalog + "/" + ref,null,true).statusCode()).isEqualTo(409);
+        body.put(field, Long.MAX_VALUE);
+        assertThat(client.write("PUT", "/api/employees/" + employeeId,body,true).statusCode()).isEqualTo(400);
+        assertThat(read(employeeId).get(field).asLong()).isEqualTo(ref);
+        body.put(field, ref + 0.5);
+        assertThat(client.write("PUT", "/api/employees/" + employeeId,body,true).statusCode()).isEqualTo(400);
+        body.put(field, null);
+        assertThat(client.write("PUT", "/api/employees/" + employeeId,body,true).statusCode()).isEqualTo(200);
+        assertThat(client.write("DELETE", "/api/" + catalog + "/" + ref,null,true).statusCode()).isEqualTo(204);
+        assertThat(client.write("PUT", "/api/" + catalog + "/" + ref,Map.of("code",code,"title",title),true).statusCode()).isEqualTo(404);
     }
 }

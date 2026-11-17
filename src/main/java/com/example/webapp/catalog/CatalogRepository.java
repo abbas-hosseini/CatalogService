@@ -27,6 +27,12 @@ public class CatalogRepository {
             Map.of("employeeId", employeeId), this::mapRow);
     }
 
+    public Map<String, Object> find(Catalog catalog, long id) {
+        var rows = jdbc.query("SELECT * FROM " + catalog.table + " WHERE id = :id", Map.of("id", id), this::mapRow);
+        if (rows.isEmpty()) throw new CatalogException(404, "رکورد موردنظر پیدا نشد.");
+        return rows.getFirst();
+    }
+
     private Map<String, Object> mapRow(ResultSet rs, int rowNum) throws SQLException {
         Map<String, Object> row = new LinkedHashMap<>();
         var meta = rs.getMetaData();

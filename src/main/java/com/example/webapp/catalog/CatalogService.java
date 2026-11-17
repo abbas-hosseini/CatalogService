@@ -62,6 +62,8 @@ public class CatalogService {
 
     public long saveEmployee(Long id, Requests.Employee r) {
         requireExisting(Catalog.EMPLOYEES, id);
+        requireReference(Catalog.SPECIALITIES, r.specialityId());
+        requireReference(Catalog.ORGANIZATIONAL_LEVELS, r.grade());
         return repository.save(Catalog.EMPLOYEES, id, fields("personnel_code", clean(r.personnelCode()),
             "first_name", clean(r.firstName()), "last_name", clean(r.lastName()),
             "education_level", r.educationLevel(), "start_date", r.startDate(),
@@ -69,7 +71,7 @@ public class CatalogService {
             "bachelor_major", clean(r.bachelorMajor()), "bachelor_university", clean(r.bachelorUniversity()),
             "master_major", clean(r.masterMajor()), "master_university", clean(r.masterUniversity()),
             "doctoral_major", clean(r.doctoralMajor()), "doctoral_university", clean(r.doctoralUniversity()),
-            "speciality", clean(r.speciality()), "grade", r.grade(), "hire_date", calendarDate(r.hireDate()),
+            "speciality_id", r.specialityId(), "grade", r.grade(), "hire_date", calendarDate(r.hireDate()),
             "last_marine_rank", r.lastMarineRank(),
             "description", clean(r.description())));
     }
@@ -78,6 +80,12 @@ public class CatalogService {
         requireExisting(Catalog.COMPANIES, id);
         return repository.save(Catalog.COMPANIES, id, fields("code", clean(r.code()), "title", clean(r.title()),
             "description", clean(r.description())));
+    }
+
+    public long saveReference(Catalog catalog, Long id, Requests.ReferenceItem r) {
+        if (catalog != Catalog.SPECIALITIES && catalog != Catalog.ORGANIZATIONAL_LEVELS) throw new IllegalArgumentException("Invalid reference catalog");
+        requireExisting(catalog, id);
+        return repository.save(catalog, id, fields("code", clean(r.code()), "title", clean(r.title()), "description", clean(r.description())));
     }
 
     public long savePosition(Long id, Requests.EmployeePosition r) {
@@ -106,7 +114,10 @@ public class CatalogService {
         requireExisting(Catalog.TRAININGS, id);
         requireReference(Catalog.EMPLOYEES, r.employeeId());
         requireReference(Catalog.COURSES, r.courseId());
+        if (r.startDate() != null && r.startDate().isAfter(r.completionDate()))
+            throw new CatalogException(400, "تاریخ شروع دوره نمی‌تواند بعد از تاریخ پایان باشد.");
         return repository.save(Catalog.TRAININGS, id, fields("employee_id", r.employeeId(), "course_id", r.courseId(),
+            "start_date", r.startDate() == null ? null : Date.valueOf(r.startDate()), "impact_coefficient", r.impactCoefficient(),
             "completion_date", Date.valueOf(r.completionDate()), "score", r.score(), "certificate_number", clean(r.certificateNumber()), "notes", clean(r.notes())));
     }
 

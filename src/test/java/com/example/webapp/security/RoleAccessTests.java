@@ -60,7 +60,7 @@ class RoleAccessTests {
     @Test void summaryAndLookupsNeverExposeRestrictedEmployeeProfileFields() throws Exception {
         var user=user(List.of(role("scores.view","dashboard.view")));
         String secret="private-"+UUID.randomUUID();
-        admin.write("POST","/api/employees",Map.of("personnelCode",UUID.randomUUID().toString(),"firstName","نام","lastName","خانوادگی","speciality",secret,"birthDate","1370-01-01"),true);
+        assertThat(admin.write("POST","/api/employees",Map.of("personnelCode",UUID.randomUUID().toString(),"firstName","نام","lastName","خانوادگی","description",secret,"birthDate","1370-01-01"),true).statusCode()).isEqualTo(201);
         var lookups=user.client.get("/api/lookups");assertThat(lookups.statusCode()).isEqualTo(200);
         assertThat(lookups.body()).contains("personnelCode").doesNotContain(secret,"birthDate","speciality","educationLevel","grade");
         var summary=admin.json.readTree(user.client.get("/api/summary").body());
@@ -72,6 +72,27 @@ class RoleAccessTests {
         assertThat(admin.write("PUT","/api/admin/users/"+user.id,updateUser(false,List.of(viewer)),true).statusCode()).isEqualTo(204);
         assertThat(admin.write("PUT","/api/admin/users/"+user.id,updateUser(true,List.of(viewer)),true).statusCode()).isEqualTo(204);
         assertThat(user.client.get("/api/employees").statusCode()).isEqualTo(401);
+    }
+
+    @Test void employeeEditorsReceiveReferenceLabelsWithoutReferenceManagementAccess() throws Exception {
+        var employeeEditor=user(List.of(role("employees.edit")));
+        for(String catalog:List.of("specialities","organizational-levels")) {
+            String code=UUID.randomUUID().toString(),title="گزینه "+UUID.randomUUID(),privateNote="private-"+UUID.randomUUID();
+            var created=admin.write("POST","/api/"+catalog,Map.of("code",code,"title",title,"description",privateNote),true);
+            assertThat(created.statusCode()).as(created.body()).isEqualTo(201);
+            long id=admin.json.readTree(created.body()).get("id").asLong();
+            assertThat(employeeEditor.client.get("/api/"+catalog).statusCode()).isEqualTo(403);
+            var lookup=employeeEditor.client.get("/api/lookups");assertThat(lookup.body()).contains(code,title).doesNotContain(privateNote);
+            assertThat(employeeEditor.client.write("POST","/api/"+catalog,Map.of("code",code,"title",title),true).statusCode()).isEqualTo(403);
+            assertThat(employeeEditor.client.write("DELETE","/api/"+catalog+"/"+id,null,true).statusCode()).isEqualTo(403);
+            long editorRole=role(catalog+".edit");var editor=user(List.of(editorRole));
+            assertThat(editor.client.get("/api/"+catalog).statusCode()).isEqualTo(200);
+            assertThat(editor.client.write("PUT","/api/"+catalog+"/"+id,Map.of("code",code,"title",title),false).statusCode()).isEqualTo(403);
+            assertThat(editor.client.write("PUT","/api/"+catalog+"/"+id,Map.of("code",code,"title",title),true).statusCode()).isEqualTo(200);
+            assertThat(editor.client.write("DELETE","/api/"+catalog+"/"+id,null,true).statusCode()).isEqualTo(403);
+            assertThat(admin.write("PUT","/api/admin/roles/"+editorRole,Map.of("name","revoked-"+UUID.randomUUID(),"permissions",List.of()),true).statusCode()).isEqualTo(200);
+            assertThat(editor.client.get("/api/"+catalog).statusCode()).isEqualTo(403);
+        }
     }
     @Test void builtInAndLastActiveAdministratorAreProtectedAndInvalidRolesRollBack() throws Exception {
         long adminRole=jdbc.queryForObject("SELECT id FROM app_roles WHERE system_code = 'ADMIN'",Long.class);

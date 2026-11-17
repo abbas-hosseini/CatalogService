@@ -26,6 +26,12 @@ public class RequestAuthorization {
         if (path.matches("/api/employees/[0-9]+/scores"))
             return method.equals("PUT") && permissions.contains("scores.view") &&
                 Set.of("scores.create", "scores.edit", "scores.delete").stream().anyMatch(permissions::contains);
+        if (path.matches("/api/scores/[0-9]+/details"))
+            return permissions.contains("scores.view") && (read || method.equals("PUT") && permissions.contains("scores.edit"));
+        if (path.matches("/api/scores/[0-9]+/attachments/[0-9]+"))
+            return read && permissions.contains("scores.view");
+        if (path.matches("/api/trainings/[0-9]+/attachments(?:/[0-9]+)?"))
+            return read && permissions.contains("trainings.view");
         String[] parts = path.split("/");
         if (parts.length < 3 || !parts[1].equals("api") || !Permissions.CATALOGS.contains(parts[2])) return false;
         String action = switch (method) {

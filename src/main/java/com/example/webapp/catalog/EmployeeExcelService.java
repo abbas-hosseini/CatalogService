@@ -24,10 +24,10 @@ public class EmployeeExcelService {
         Map.entry("bachelorMajor", "رشته کارشناسی"), Map.entry("bachelorUniversity", "دانشگاه کارشناسی"),
         Map.entry("masterMajor", "رشته کارشناسی ارشد"), Map.entry("masterUniversity", "دانشگاه کارشناسی ارشد"),
         Map.entry("doctoralMajor", "رشته دکتری"), Map.entry("doctoralUniversity", "دانشگاه دکتری"),
-        Map.entry("speciality", "تخصص"), Map.entry("grade", "مقطع تحصیلی"),
+        Map.entry("specialityId", "تخصص"), Map.entry("grade", "سطح سازمانی"),
         Map.entry("lastMarineRank", "آخرین درجه دریایی"), Map.entry("description", "توضیحات"));
     private static final Set<String> DATE_FIELDS = Set.of("startDate", "birthDate", "hireDate");
-    private static final Set<String> DECIMAL_FIELDS = Set.of("marineExperience", "grade");
+    private static final Set<String> DECIMAL_FIELDS = Set.of("marineExperience");
     private final CatalogRepository repository;
     private final CatalogService catalog;
     private final Validator validator;
@@ -68,6 +68,8 @@ public class EmployeeExcelService {
                 throw new CatalogException(400, "هر فایل می‌تواند حداکثر ۱۰۰۰ ردیف پس از عنوان ستون‌ها داشته باشد.");
             var formatter = new DataFormatter(Locale.ROOT);
             var columns = columns(sheet.getRow(0), formatter);
+            var specialities = referenceOptions(Catalog.SPECIALITIES);
+            var levels = referenceOptions(Catalog.ORGANIZATIONAL_LEVELS);
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (blank(row, formatter)) continue;
@@ -89,8 +91,9 @@ public class EmployeeExcelService {
                     decimal(values.get("marineExperience"), "marineExperience", errors), gender(values.get("gender")),
                     values.get("bachelorMajor"), values.get("bachelorUniversity"),
                     values.get("masterMajor"), values.get("masterUniversity"),
-                    values.get("doctoralMajor"), values.get("doctoralUniversity"), values.get("speciality"),
-                    decimal(values.get("grade"), "grade", errors), values.get("hireDate"),
+                    values.get("doctoralMajor"), values.get("doctoralUniversity"),
+                    reference(values.get("specialityId"), "specialityId", specialities, errors),
+                    reference(values.get("grade"), "grade", levels, errors), values.get("hireDate"),
                     values.get("lastMarineRank") == null ? null : values.get("lastMarineRank").toUpperCase(Locale.ROOT),
                     values.get("description"));
                 validator.validate(employee).stream().sorted(Comparator.comparing(v -> v.getPropertyPath().toString()))
@@ -146,8 +149,8 @@ public class EmployeeExcelService {
                 case "دانشگاهکارشناسیارشد", "masteruniversity" -> "masterUniversity";
                 case "رشتهدکتری", "doctoralmajor" -> "doctoralMajor";
                 case "دانشگاهدکتری", "doctoraluniversity" -> "doctoralUniversity";
-                case "تخصص", "speciality" -> "speciality";
-                case "مقطعتحصیلی", "grade" -> "grade";
+                case "تخصص", "کدتخصص", "speciality", "specialityid", "specialitycode" -> "specialityId";
+                case "سطحسازمانی", "کدسطحسازمانی", "مقطعتحصیلی", "grade", "organizationallevelcode" -> "grade";
                 case "آخریندرجهدریایی", "lastmarinerank" -> "lastMarineRank";
                 case "توضیحات", "description" -> "description";
                 default -> throw new CatalogException(400, "عنوان ستون " + (cell.getColumnIndex() + 1) + " شناخته نشد. از قالب نمونه استفاده کنید.");
@@ -193,6 +196,29 @@ public class EmployeeExcelService {
 
     private static String normalizeLabel(String value) {
         return value.replace('ي', 'ی').replace('ك', 'ک').replace("\u200c", "").replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+    }
+
+    private Map<String, Set<Long>> referenceOptions(Catalog catalog) {
+        var options = new HashMap<String, Set<Long>>();
+        for (var row : repository.list(catalog)) {
+            long id = ((Number) row.get("id")).longValue();
+            String code = row.get("code").toString(), title = row.get("title").toString();
+            for (String key : List.of(code, title, code + " — " + title))
+                options.computeIfAbsent(referenceKey(key), ignored -> new HashSet<>()).add(id);
+        }
+        return options;
+    }
+    private static String referenceKey(String value) {
+        return value.strip().replace('ي', 'ی').replace('ك', 'ک').toLowerCase(Locale.ROOT);
+    }
+    private static Long reference(String value, String field, Map<String, Set<Long>> options, List<String> errors) {
+        if (value == null) return null;
+        var matches = options.getOrDefault(referenceKey(value), Set.of());
+        if (matches.size() == 1) return matches.iterator().next();
+        errors.add(LABELS.get(field) + (matches.isEmpty() ?
+            ": این گزینه در اطلاعات پایه تعریف نشده است. ابتدا آن را تعریف و قالب تازه دریافت کنید." :
+            ": این مقدار به چند گزینه اشاره می‌کند؛ گزینهٔ کامل «کد — عنوان» را از قالب تازه انتخاب کنید."));
+        return null;
     }
 
     private static String education(String value) {

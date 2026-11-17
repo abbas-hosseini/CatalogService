@@ -10,6 +10,8 @@ public final class Permissions {
     public static final List<Group> GROUPS = List.of(
         new Group("dashboard", "نمای کلی", List.of("view")),
         new Group("companies", "شرکت‌ها", List.of("view", "create", "edit", "delete")),
+        new Group("specialities", "تخصص‌ها", List.of("view", "create", "edit", "delete")),
+        new Group("organizational-levels", "سطوح سازمانی", List.of("view", "create", "edit", "delete")),
         new Group("factors", "عوامل ارزشیابی", List.of("view", "create", "edit", "delete")),
         new Group("jobs", "ساختار مشاغل", List.of("view", "create", "edit", "delete")),
         new Group("requirements", "شرایط احراز شغل", List.of("view", "create", "edit", "delete")),
@@ -21,7 +23,7 @@ public final class Permissions {
         new Group("security", "کاربران و نقش‌ها", List.of("manage"))
     );
     public static final Set<String> ALL;
-    public static final Set<String> CATALOGS = Set.of("companies", "factors", "jobs", "requirements", "employees", "positions", "courses", "trainings", "scores");
+    public static final Set<String> CATALOGS = Set.of("companies", "specialities", "organizational-levels", "factors", "jobs", "requirements", "employees", "positions", "courses", "trainings", "scores");
     static {
         var keys = new LinkedHashSet<String>();
         GROUPS.forEach(group -> group.actions().forEach(action -> keys.add(group.resource() + "." + action)));

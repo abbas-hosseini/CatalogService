@@ -18,12 +18,13 @@ public class ApiExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     ResponseEntity<?> oversizedFile(MaxUploadSizeExceededException e) {
-        return ResponseEntity.status(413).body(Map.of("message", "حجم فایل باید حداکثر ۵ مگابایت باشد."));
+        return ResponseEntity.status(413).body(Map.of("message", "حجم هر فایل باید حداکثر ۵ مگابایت و مجموع فایل‌ها در هر درخواست حداکثر ۵۰ مگابایت باشد."));
     }
 
     @ExceptionHandler(MissingServletRequestPartException.class)
     ResponseEntity<?> missingFile(MissingServletRequestPartException e) {
-        return ResponseEntity.badRequest().body(Map.of("message", "فایل اکسل را انتخاب کنید."));
+        return ResponseEntity.badRequest().body(Map.of("message", e.getRequestPartName().equals("file") ?
+            "فایل اکسل را انتخاب کنید." : "اطلاعات لازم برای ذخیره ارسال نشده است. فرم را دوباره باز کنید."));
     }
     @ExceptionHandler(CatalogException.class)
     ResponseEntity<?> domain(CatalogException e) { return ResponseEntity.status(e.status()).body(Map.of("message", e.getMessage())); }
