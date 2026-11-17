@@ -88,6 +88,13 @@ public class CatalogService {
         return repository.save(catalog, id, fields("code", clean(r.code()), "title", clean(r.title()), "description", clean(r.description())));
     }
 
+    public long saveOrganizationalLevel(Long id, Requests.OrganizationalLevel r) {
+        requireExisting(Catalog.ORGANIZATIONAL_LEVELS, id);
+        return repository.save(Catalog.ORGANIZATIONAL_LEVELS, id, fields("code", clean(r.code()),
+            "title", clean(r.title()), "level", r.level() == null ? null : r.level().intValueExact(),
+            "description", clean(r.description())));
+    }
+
     public long savePosition(Long id, Requests.EmployeePosition r) {
         // Serialize company changes and assignments so they cannot create mismatched positions.
         repository.lockTree(Catalog.JOBS);

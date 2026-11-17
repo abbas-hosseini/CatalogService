@@ -31,6 +31,20 @@ class RoleAccessTests {
         return new Account(admin.json.readTree(response.body()).get("id").asLong(),username,client);
     }
     Map<String,Object> updateUser(boolean enabled, List<Long> roles){return Map.of("displayName","آزمایش","email","","enabled",enabled,"roleIds",roles);}
+    @Test void employeeSearchHasItsOwnPermissionIncludesEmployeeViewAndRevocationIsImmediate() throws Exception {
+        var viewer=user(List.of(role("employees.view")));
+        assertThat(viewer.client.get("/api/employees/search").statusCode()).isEqualTo(403);
+        long searchRole=role("employee-search.view");var searcher=user(List.of(searchRole));
+        assertThat(searcher.client.get("/api/employees/search").statusCode()).isEqualTo(200);
+        assertThat(searcher.client.get("/api/employees").statusCode()).isEqualTo(200);
+        assertThat(searcher.client.get("/api/access/me").body()).contains("employee-search.view","employees.view");
+        assertThat(searcher.client.get("/api/lookups").body()).contains("organizational-levels","specialities");
+        assertThat(searcher.client.get("/api/scores").statusCode()).isEqualTo(403);
+        assertThat(searcher.client.write("POST","/api/employees/search",Map.of(),true).statusCode()).isEqualTo(403);
+        assertThat(admin.write("PUT","/api/admin/roles/"+searchRole,Map.of("name","revoked-"+UUID.randomUUID(),"permissions",List.of()),true).statusCode()).isEqualTo(200);
+        assertThat(searcher.client.get("/api/employees/search").statusCode()).isEqualTo(403);
+        assertThat(new SecurityTestClient(port).get("/api/employees/search").statusCode()).isEqualTo(401);
+    }
     @Test void usersWithoutRolesCanOnlyAccessTheirAccountAndCannotEscalate() throws Exception {
         var user=user(List.of());
         assertThat(user.client.get("/api/account").statusCode()).isEqualTo(200);

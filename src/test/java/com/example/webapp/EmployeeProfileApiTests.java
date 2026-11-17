@@ -116,4 +116,38 @@ class EmployeeProfileApiTests {
         assertThat(client.write("DELETE", "/api/" + catalog + "/" + ref,null,true).statusCode()).isEqualTo(204);
         assertThat(client.write("PUT", "/api/" + catalog + "/" + ref,Map.of("code",code,"title",title),true).statusCode()).isEqualTo(404);
     }
+
+    @Test void organizationalLevelNumberCanBeCreatedEditedAndClearedWithoutChangingEmployeeReference() throws Exception {
+        var body = new HashMap<String, Object>(Map.of("code", UUID.randomUUID().toString(), "title", UUID.randomUUID().toString(), "level", 3));
+        var response = client.write("POST", "/api/organizational-levels", body, true);
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(201);
+        long id = client.json.readTree(response.body()).get("id").asLong();
+        var person = employee();person.put("grade", id);long employeeId = create(person);
+        assertThat(jdbc.queryForObject("SELECT level FROM organizational_levels WHERE id=?", Integer.class, id)).isEqualTo(3);
+        for (int number : List.of(0, 12, Integer.MAX_VALUE)) {
+            body.put("level", number);
+            assertThat(client.write("PUT", "/api/organizational-levels/" + id, body, true).statusCode()).isEqualTo(200);
+            JsonNode row = null;
+            for (var item : client.json.readTree(client.get("/api/organizational-levels").body())) if (item.get("id").asLong() == id) row = item;
+            assertThat(row).isNotNull();assertThat(row.get("level").isIntegralNumber()).isTrue();
+            assertThat(row.get("level").asInt()).isEqualTo(number);
+            assertThat(read(employeeId).get("grade").asLong()).isEqualTo(id);
+        }
+        body.put("level", null);
+        assertThat(client.write("PUT", "/api/organizational-levels/" + id, body, true).statusCode()).isEqualTo(200);
+        assertThat(jdbc.queryForObject("SELECT level FROM organizational_levels WHERE id=?", Integer.class, id)).isNull();
+        assertThat(read(employeeId).get("grade").asLong()).isEqualTo(id);
+    }
+
+    @Test void organizationalLevelRejectsNegativeFractionalAndOutOfRangeNumbersWithoutChangingData() throws Exception {
+        var body = new HashMap<String, Object>(Map.of("code", UUID.randomUUID().toString(), "title", UUID.randomUUID().toString()));
+        for (Object invalid : List.of(-1, new java.math.BigDecimal("1.5"), 2147483648L, "not-a-number")) {
+            body.put("level", invalid);
+            var response = client.write("PUT", "/api/organizational-levels/" + gradeId, body, true);
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
+            assertThat(jdbc.queryForObject("SELECT level FROM organizational_levels WHERE id=?", Integer.class, gradeId)).isNull();
+            assertThat(client.write("POST", "/api/organizational-levels", body, true).statusCode()).isEqualTo(400);
+        }
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM organizational_levels WHERE code=?", Integer.class, body.get("code"))).isZero();
+    }
 }

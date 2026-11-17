@@ -39,7 +39,7 @@ const educationLabel = value => Object.hasOwn(educationLevels,value) ? education
 
 const sections = {
   specialities: {title:'تخصص‌ها',singular:'تخصص',description:'تخصص‌های قابل انتخاب برای کارکنان را تعریف و ویرایش کنید.',fields:[codeField,field('title','عنوان تخصص','text',{required:true,max:200}),descriptionField],columns:[['code','کد تخصص'],['title','عنوان تخصص'],['description','توضیحات']]},
-  'organizational-levels': {title:'سطوح سازمانی',singular:'سطح سازمانی',description:'سطوح سازمانی کارکنان را تعریف کنید. عنوان سطوح منتقل‌شده از مقادیر قبلی را می‌توانید ویرایش کنید.',fields:[codeField,field('title','عنوان سطح سازمانی','text',{required:true,max:200}),descriptionField],columns:[['code','کد سطح'],['title','سطح سازمانی'],['description','توضیحات']]},
+  'organizational-levels': {title:'سطوح سازمانی',singular:'سطح سازمانی',description:'سطوح سازمانی کارکنان و عدد سطح هر یک را تعریف کنید. عدد سطح رکوردهای قبلی را می‌توانید از فرم ویرایش تعیین کنید.',fields:[codeField,field('title','عنوان سطح سازمانی','text',{required:true,max:200}),field('level','سطح (level)','integer',{min:0,max:2147483647,placeholder:'عدد صحیح؛ مثلاً ۱، ۲ یا ۳'}),descriptionField],columns:[['code','کد سطح'],['title','سطح سازمانی'],['level','سطح (level)'],['description','توضیحات']]},
   factors: {title:'عوامل ارزشیابی',singular:'عامل ارزشیابی',description:'شایستگی‌ها و شاخص‌های ارزیابی را در یک ساختار سلسله‌مراتبی تعریف کنید.',tree:true,fields:[codeField,titleField,refField('parentId','عامل بالادست','factors',false),descriptionField],columns:[['code','کد عامل'],['title','عنوان عامل'],['parentId','عامل بالادست','factors'],['description','توضیحات']]},
   jobs: {title:'ساختار مشاغل',singular:'شغل',description:'مشاغل هر شرکت و ارتباط آن‌ها با شغل بالادست در همان شرکت را مدیریت کنید.',tree:true,filter:'companyId',filterRef:'companies',fields:[refField('companyId','شرکت','companies'),codeField,titleField,refField('parentId','شغل بالادست','jobs',false),descriptionField],columns:[['code','کد شغل'],['title','عنوان شغل'],['companyId','شرکت','companies'],['parentId','شغل بالادست','jobs'],['description','توضیحات']]},
   companies: {title:'شرکت‌ها',singular:'شرکت',description:'شرکت‌ها را تعریف کنید و سمت کارکنان در هر شرکت را از پروندهٔ کارمند ثبت کنید.',fields:[codeField,field('title','نام شرکت','text',{required:true,max:160}),descriptionField],columns:[['code','کد شرکت'],['title','نام شرکت'],['description','توضیحات']]},
@@ -89,11 +89,13 @@ async function loadData() {
   const me=await auth.json('/api/access/me');state.permissions=me.permissions||[];
   const [lookups,entries]=await Promise.all([api('lookups'),Promise.all(Object.keys(sections).map(async key=>[key,can(key)?await api(key):[]]))]);
   state.lookups=lookups;state.data=Object.fromEntries(entries);state.ready=true;$('load-error').hidden=true;
+  invalidateEmployeeSearch();
 }
 
 function renderNavigation() {
-  const link=(key,title)=>can(key)?`<a href="#${key}" class="nav-link ${state.section===key?'active':''}" ${state.section===key?'aria-current="page"':''}>${icon(key)}<span>${title}</span></a>`:'';
+  const link=(key,title)=>can(key)?`<a href="#${key}" class="nav-link ${state.section===key?'active':''}" ${state.section===key?'aria-current="page"':''}>${icon(key==='employee-search'?'search':key)}<span>${title}</span></a>`:'';
   let html=link('dashboard','نمای کلی')+'<div class="nav-heading">اطلاعات پایه</div>'+['companies','specialities','organizational-levels','factors','jobs','employees','courses'].map(k=>link(k,sections[k].title)).join('')+'<div class="nav-heading">پرونده کارکنان</div>'+['scores','trainings'].map(k=>link(k,sections[k].title)).join('');
+  html+=link('employee-search','جست‌وجوی کارکنان');
   if(state.permissions.includes('security.manage')) html+='<div class="nav-heading">مدیریت</div><a href="/access.html" class="nav-link">'+icon('security')+'<span>کاربران و نقش‌ها</span></a>';
   $('navigation').innerHTML=html;
 }
@@ -101,7 +103,7 @@ function render() {
   if(state.ready && $('job-dialog').open) renderJobRequirements();
   if(state.ready && $('profile-dialog').open) openProfile(state.profileId);
   renderNavigation();
-  const config=sections[state.section];
+  const config=state.section==='employee-search'?employeeSearchPage:sections[state.section];
   $('page-title').textContent=config?.title||'نمای کلی'; $('breadcrumb').textContent=config?.title||'نمای کلی';
   $('page-description').textContent=config?.description||'اطلاعات کارکنان و شرایط احراز مشاغل، در یک فضای یکپارچه.';
   $('eyebrow').textContent=config?'مدیریت اطلاعات سازمان':'سرمایه انسانی سازمان';
@@ -116,6 +118,7 @@ function render() {
     $('page-content').innerHTML='<div class="empty-state"><h3>دسترسی این بخش برای شما فعال نیست</h3><p>از بخش‌های مجاز در منو استفاده کنید یا برای دریافت دسترسی با مدیر سامانه تماس بگیرید.</p><a class="button secondary" href="/account.html">پروفایل من</a></div>';
     return;
   }
+  if(state.section==='employee-search')return renderEmployeeSearch();
   if(!config) return renderDashboard();
   const filterTitle=config.filterRef==='companies'?'شرکت':config.filterRef==='employees'?'کارمند':'شغل';
   const filterAll=config.filterRef==='companies'?'همه شرکت‌ها':config.filterRef==='employees'?'همه کارمندان':'همه مشاغل';
@@ -158,7 +161,7 @@ function cell(config,column,row) {
   if(key==='startDate'&&config===sections.trainings)return date(value);
   if(key==='impactCoefficient')return value==null?'—':`${number(value)}٪`;
   if(['startDate','birthDate','hireDate'].includes(key))return jalaliDateCell(value);
-  if(['grade','marineExperience'].includes(key))return value==null?'—':number(value);
+  if(['grade','marineExperience','level'].includes(key))return value==null?'—':number(value);
   if(['gender','lastMarineRank'].includes(key))return escapeHtml(employeeValue(config.fields.find(field=>field.name===key),value));
   if(key==='assessedOn'||key==='completionDate')return date(value);
   if(key==='educationLevel')return escapeHtml(educationLabel(value));
@@ -239,6 +242,7 @@ function openForm(record=null,section=state.section,prefill={}) {
     else if(f.type==='textarea')input=`<textarea ${attrs} maxlength="${f.max}">${escapeHtml(val)}</textarea>`;
     else if(f.type==='jalali')input=`<input ${attrs} type="text" dir="ltr" value="${escapeHtml(val?jalaliDate(val):'')}" placeholder="۱۴۰۳/۰۱/۰۱" maxlength="10"><span class="field-help" id="help-${f.name}">سال/ماه/روز شمسی؛ ارقام فارسی یا انگلیسی پذیرفته می‌شوند.</span>`;
     else if(f.type==='decimal')input=`<input ${attrs} type="text" inputmode="decimal" dir="ltr" value="${escapeHtml(val)}" placeholder="${escapeHtml(f.placeholder||'مثلاً ۸')}" maxlength="12">`;
+    else if(f.type==='integer')input=`<input ${attrs} type="text" inputmode="numeric" dir="ltr" value="${escapeHtml(val)}" placeholder="${escapeHtml(f.placeholder||'')}" maxlength="10">`;
     else input=`<input ${attrs} type="${f.type}" value="${escapeHtml(val)}" ${f.max?`maxlength="${f.max}"`:''} ${f.type==='date'?`${f.allowFuture?'':`max="${today()}"`} dir="ltr"`:''} placeholder="${escapeHtml(f.placeholder||'')}">`;
     const needsReference=f.type==='select'&&!referenceRows(f.ref).length;
     return `${f.group?`<h3 class="form-section-title">${escapeHtml(f.group)}</h3>`:''}<div class="field ${f.type==='textarea'?'full':''}"><label for="field-${f.name}">${f.label}${f.required?'<span class="required">*</span>':''}</label>${input}${needsReference?`<span class="field-help">ابتدا در بخش «${sections[f.ref].title}» اطلاعات ثبت کنید.</span>`:''}<span class="field-error" id="error-${f.name}"></span></div>`;
@@ -284,6 +288,11 @@ async function saveForm(event) {
       if(!parts||Number(parts[1])<1||Number(parts[1])>1999||Number(parts[2])<1||Number(parts[2])>12||Number(parts[3])<1||Number(parts[3])>(Number(parts[2])<=6?31:30)){
         fieldError(f.name,'تاریخ شمسی را به صورت ۱۴۰۳/۰۱/۰۱ وارد کنید.');invalid=true;
       }else payload[f.name]=`${parts[1]}-${parts[2].padStart(2,'0')}-${parts[3].padStart(2,'0')}`;
+    }
+    else if(f.type==='integer'){
+      const normalized=normalizeDigits(value),n=Number(normalized);
+      if(!/^\d+$/.test(normalized)||!Number.isSafeInteger(n)||n<f.min||n>f.max){fieldError(f.name,`عدد صحیح بین ${number(f.min)} و ${number(f.max)} وارد کنید.`);invalid=true;}
+      payload[f.name]=n;
     }
     else if(f.type==='decimal'){
       const normalized=normalizeDigits(value),n=Number(normalized);
@@ -495,7 +504,7 @@ function navigate(){
   let key=location.hash.slice(1);
   if(key==='requirements'){key='jobs';history.replaceState(null,'','#jobs');}
   if(key==='positions'){key='employees';history.replaceState(null,'','#employees');}
-  if(!key||(!Object.hasOwn(sections,key)&&key!=='dashboard'))key=['dashboard','companies','specialities','organizational-levels','factors','jobs','employees','courses','scores','trainings'].find(resource=>can(resource))||'dashboard';
+  if(!key||(!Object.hasOwn(sections,key)&&!['dashboard','employee-search'].includes(key)))key=['dashboard','companies','specialities','organizational-levels','factors','jobs','employees','employee-search','courses','scores','trainings'].find(resource=>can(resource))||'dashboard';
   state.section=key;
   state.search='';state.filter='';state.page=1;render();
 }

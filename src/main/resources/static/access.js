@@ -58,11 +58,12 @@ function openRole(role=null) {
     if(!input.checked&&action==='view')document.querySelectorAll('[data-permission]').forEach(box=>{if(box.dataset.permission.startsWith(resource+'.'))box.checked=false;});
     // If a parent view is explicitly cleared, clear the dependent section as well.
     if(!input.checked&&action==='view'&&['jobs','employees'].includes(resource)){
-      const child=resource==='jobs'?'requirements':'positions';
-      document.querySelectorAll('[data-permission]').forEach(box=>{if(box.dataset.permission.startsWith(child+'.'))box.checked=false;});
+      const children=resource==='jobs'?['requirements']:['positions','employee-search'];
+      document.querySelectorAll('[data-permission]').forEach(box=>{if(children.some(child=>box.dataset.permission.startsWith(child+'.')))box.checked=false;});
     }
     if(document.querySelector('[data-permission="requirements.view"]')?.checked)setPermission('jobs.view',true);
     if(document.querySelector('[data-permission="positions.view"]')?.checked)setPermission('employees.view',true);
+    if(document.querySelector('[data-permission="employee-search.view"]')?.checked)setPermission('employees.view',true);
   }));
   accessElement('role-dialog').showModal();
 }

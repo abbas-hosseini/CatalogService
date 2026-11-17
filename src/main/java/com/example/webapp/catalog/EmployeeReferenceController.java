@@ -20,11 +20,11 @@ public class EmployeeReferenceController {
         return Map.of("id", service.saveReference(Catalog.SPECIALITIES, id, r));
     }
     @PostMapping("/organizational-levels") @ResponseStatus(HttpStatus.CREATED)
-    public Map<String, Long> createLevel(@Valid @RequestBody Requests.ReferenceItem r) {
-        return Map.of("id", service.saveReference(Catalog.ORGANIZATIONAL_LEVELS, null, r));
+    public Map<String, Long> createLevel(@Valid @RequestBody Requests.OrganizationalLevel r) {
+        return Map.of("id", service.saveOrganizationalLevel(null, r));
     }
     @PutMapping("/organizational-levels/{id}")
-    public Map<String, Long> updateLevel(@PathVariable long id, @Valid @RequestBody Requests.ReferenceItem r) {
-        return Map.of("id", service.saveReference(Catalog.ORGANIZATIONAL_LEVELS, id, r));
+    public Map<String, Long> updateLevel(@PathVariable long id, @Valid @RequestBody Requests.OrganizationalLevel r) {
+        return Map.of("id", service.saveOrganizationalLevel(id, r));
     }
 }

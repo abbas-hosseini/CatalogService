@@ -16,6 +16,7 @@ public final class Permissions {
         new Group("jobs", "ساختار مشاغل", List.of("view", "create", "edit", "delete")),
         new Group("requirements", "شرایط احراز شغل", List.of("view", "create", "edit", "delete")),
         new Group("employees", "کارمندان", List.of("view", "create", "edit", "delete", "import")),
+        new Group("employee-search", "جست‌وجوی کارکنان", List.of("view")),
         new Group("positions", "سمت‌های کارمندان", List.of("view", "create", "edit", "delete")),
         new Group("courses", "دوره‌های آموزشی", List.of("view", "create", "edit", "delete")),
         new Group("trainings", "سوابق آموزشی", List.of("view", "create", "edit", "delete")),
@@ -39,6 +40,7 @@ public final class Permissions {
         // These forms are accessed through their parent records, not separate menus.
         if (result.contains("requirements.view")) result.add("jobs.view");
         if (result.contains("positions.view")) result.add("employees.view");
+        if (result.contains("employee-search.view")) result.add("employees.view");
         return result;
     }
 }

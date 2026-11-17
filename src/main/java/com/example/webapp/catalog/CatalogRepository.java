@@ -33,6 +33,29 @@ public class CatalogRepository {
             Map.of("employeeId", employeeId), this::mapRow);
     }
 
+    public List<Map<String, Object>> employeeSearchCandidates(EmployeeSearchRequest request, Integer targetLevel) {
+        var conditions = new ArrayList<String>();
+        var parameters = new MapSqlParameterSource();
+        if (request.specialityId() != null) {
+            conditions.add("e.speciality_id = :speciality");parameters.addValue("speciality", request.specialityId());
+        }
+        if (targetLevel != null) {
+            conditions.add("e.grade IN (SELECT id FROM organizational_levels WHERE level IN (:targetLevel, :lowerLevel))");
+            parameters.addValue("targetLevel", targetLevel).addValue("lowerLevel", targetLevel - 1);
+        }
+        if (request.gender() != null) {
+            conditions.add("e.gender = :gender");parameters.addValue("gender", request.gender());
+        }
+        if (request.educationLevel() != null) {
+            conditions.add("e.education_level = :education");parameters.addValue("education", request.educationLevel());
+        }
+        if (request.marineExperienceMin() != null) {
+            conditions.add("e.marine_experience >= :marine");parameters.addValue("marine", request.marineExperienceMin());
+        }
+        return jdbc.query("SELECT e.* FROM employees e" + (conditions.isEmpty() ? "" : " WHERE " + String.join(" AND ", conditions))
+            + " ORDER BY e.personnel_code, e.id", parameters, this::mapRow);
+    }
+
     public Map<String, Object> find(Catalog catalog, long id) {
         var rows = jdbc.query("SELECT * FROM " + catalog.table + " WHERE id = :id", Map.of("id", id), this::mapRow);
         if (catalog == Catalog.EMPLOYEES) assessmentScores.populate(rows);

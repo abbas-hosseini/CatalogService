@@ -18,7 +18,7 @@ public class LookupController {
         "scores", List.of("employees", "factors"));
     private static final Map<String, String> QUERIES = Map.of(
         "specialities", "SELECT id, code, title FROM specialities ORDER BY id",
-        "organizational-levels", "SELECT id, code, title FROM organizational_levels ORDER BY id",
+        "organizational-levels", "SELECT id, code, title, level FROM organizational_levels ORDER BY id",
         "companies", "SELECT id, code, title FROM companies ORDER BY id",
         "jobs", "SELECT id, code, title, company_id, parent_id FROM jobs ORDER BY id",
         "employees", "SELECT id, personnel_code, first_name, last_name FROM employees ORDER BY id",

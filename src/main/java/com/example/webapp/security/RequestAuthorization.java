@@ -20,6 +20,8 @@ public class RequestAuthorization {
         Set<String> permissions = access.permissions(user);
         if (path.equals("/access.html") || path.startsWith("/api/admin/")) return permissions.contains("security.manage");
         if (path.equals("/api/summary")) return read && permissions.contains("dashboard.view");
+        if (path.equals("/api/employees/search"))
+            return read && permissions.contains("employee-search.view") && permissions.contains("employees.view");
         if (path.equals("/templates/employees-import.xlsx")) return read && permissions.contains("employees.import");
         if (Set.of("/api/employees/import", "/api/employees/import/preview").contains(path))
             return method.equals("POST") && permissions.contains("employees.import");

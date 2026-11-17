@@ -62,6 +62,12 @@ public final class Requests {
         @NotBlank @Size(max = 200) String title,
         @Size(max = 2000) String description) {}
 
+    public record OrganizationalLevel(
+        @NotBlank @Size(max = 40) String code,
+        @NotBlank @Size(max = 200) String title,
+        @DecimalMin("0") @DecimalMax("2147483647") @Digits(integer = 10, fraction = 0) BigDecimal level,
+        @Size(max = 2000) String description) {}
+
     public record EmployeePosition(
         @NotNull @Positive Long employeeId,
         @NotNull @Positive Long companyId,

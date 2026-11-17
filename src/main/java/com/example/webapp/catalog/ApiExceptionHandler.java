@@ -34,8 +34,14 @@ public class ApiExceptionHandler {
         Map<String, String> fields = new LinkedHashMap<>();
         e.getBindingResult().getFieldErrors().forEach(error -> fields.putIfAbsent(error.getField(), switch (Objects.requireNonNullElse(error.getCode(), "")) {
             case "NotNull", "NotBlank" -> "تکمیل این فیلد الزامی است.";
-            case "DecimalMin", "DecimalMax" -> error.getField().equals("durationHours") ? "مدت دوره باید بیشتر از صفر و حداکثر ۱۰۰۰۰ ساعت باشد." : "مقدار باید بین ۰ تا ۱۰۰ باشد.";
-            case "Digits" -> "حداکثر دو رقم اعشار مجاز است.";
+            case "DecimalMin", "DecimalMax" -> switch (error.getField()) {
+                case "durationHours" -> "مدت دوره باید بیشتر از صفر و حداکثر ۱۰۰۰۰ ساعت باشد.";
+                case "level" -> "سطح باید عدد صحیح بین ۰ تا ۲۱۴۷۴۸۳۶۴۷ باشد.";
+                case "experienceMin", "experienceMax" -> "سابقه باید بین ۰ تا ۳۰۰ سال باشد.";
+                case "assessmentScoreMin", "assessmentScoreMax" -> "نمره باید صفر یا بزرگ‌تر باشد.";
+                default -> "مقدار باید بین ۰ تا ۱۰۰ باشد.";
+            };
+            case "Digits" -> error.getField().equals("level") ? "سطح باید عدد صحیح و بدون اعشار باشد." : "حداکثر دو رقم اعشار مجاز است.";
             case "PastOrPresent" -> "تاریخ نمی‌تواند در آینده باشد.";
             case "JalaliDate" -> "تاریخ شمسی معتبر با قالب ۱۴۰۳/۰۱/۰۱ وارد کنید (سال ۰۰۰۱ تا ۱۹۹۹).";
             case "Size" -> "طول متن بیشتر از حد مجاز است.";
