@@ -139,7 +139,7 @@ class CatalogApiTests {
         assertStatus("POST", "scores", Map.of("employeeId", 1, "factorId", 1, "score", 50, "assessedOn", LocalDate.now().plusDays(1).toString()), 400);
         assertStatus("PUT", "jobs/99999", Map.of("code", "J", "title", "شغل", "companyId", 99999), 404);
         assertStatus("DELETE", "employees/99999", null, 404);
-        assertStatus("GET", "not-a-table", null, 404);
+        assertStatus("GET", "not-a-table", null, 403);
     }
 
     @Test

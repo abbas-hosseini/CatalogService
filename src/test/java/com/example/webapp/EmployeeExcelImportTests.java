@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -34,6 +35,14 @@ class EmployeeExcelImportTests {
     String csrf;
     final JsonMapper json = JsonMapper.builder().build();
     static final String[] HEADERS = {"کد پرسنلی", "نام", "نام خانوادگی", "مدرک تحصیلی", "تاریخ شروع به کار (شمسی)", "توضیحات"};
+    static final String[] PROFILE_HEADERS = {"personnelCode", "firstName", "lastName", "educationLevel", "startDate",
+        "birthDate", "marineExperience", "gender", "bachelorMajor", "bachelorUniversity", "masterMajor", "masterUniversity",
+        "doctoralMajor", "doctoralUniversity", "speciality", "grade", "hireDate", "lastMarineRank", "description"};
+    static final String[] PROFILE_PERSIAN_HEADERS = {"کد پرسنلی", "نام", "نام خانوادگی", "مدرک تحصیلی", "تاریخ شروع به کار (شمسی)",
+        "تاریخ تولد (شمسی)", "سابقه دریایی (سال)", "جنسیت", "رشته کارشناسی", "دانشگاه کارشناسی", "رشته کارشناسی ارشد", "دانشگاه کارشناسی ارشد",
+        "رشته دکتری", "دانشگاه دکتری", "تخصص", "مقطع تحصیلی", "تاریخ استخدام (شمسی)", "آخرین درجه دریایی", "توضیحات"};
+    static final Object[] PROFILE_VALUES = {"00042", "علی", "رضایی", "doctorate", "۱۴۰۳/۱/۱", "١٣٧٠/١/٢", 12.5, "زن",
+        "مهندسی دریا", "دانشگاه اول", "مدیریت", "دانشگاه دوم", "حمل و نقل", "دانشگاه سوم", "  مدیریت دریایی  ", "٠٫٠٠", "۱۳۹۹/۱۲/۳۰", "nakhda_bani", "توضیحات کامل"};
 
     @BeforeEach
     void emptyEmployees() throws Exception {
@@ -178,10 +187,130 @@ class EmployeeExcelImportTests {
         try (var workbook = WorkbookFactory.create(new java.io.ByteArrayInputStream(response.body()))) {
             assertThat(workbook.getSheetAt(0).isRightToLeft()).isTrue();
             assertThat(workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue()).isEqualTo(HEADERS[0]);
-            assertThat(workbook.getNumberOfSheets()).isEqualTo(2);
+            Sheet sheet = workbook.getSheetAt(0);
+            assertThat(sheet.getRow(0).getLastCellNum()).isEqualTo((short) 19);
+            assertThat(sheet.getDataValidations()).hasSize(5);
+            assertThat(workbook.getNumberOfSheets()).isEqualTo(3);
+            assertThat(workbook.isSheetHidden(2)).isTrue();
+            assertThat(workbook.getName("MarineRanks").getRefersToFormula()).isEqualTo("'گزینه‌ها'!$A$2:$A$18");
         }
         assertThat(upload(response.body(), "template.xlsx", false).statusCode()).isEqualTo(400);
         assertThat(count()).isZero();
+    }
+
+    @Test
+    void importsEveryProfileFieldFromTheActualDownloadableTemplate() throws Exception {
+        var template = http.send(HttpRequest.newBuilder(uri("/templates/employees-import.xlsx")).GET().build(), HttpResponse.BodyHandlers.ofByteArray());
+        assertThat(template.statusCode()).isEqualTo(200);
+        try (var workbook = WorkbookFactory.create(new java.io.ByteArrayInputStream(template.body()))) {
+            Sheet sheet = workbook.getSheetAt(0);
+            Row row = sheet.getRow(1);
+            for (Cell header : sheet.getRow(0)) {
+                int index = Arrays.asList(PROFILE_PERSIAN_HEADERS).indexOf(header.getStringCellValue());
+                assertThat(index).as(header.getStringCellValue()).isGreaterThanOrEqualTo(0);
+                setValue(row.getCell(header.getColumnIndex()), PROFILE_VALUES[index]);
+            }
+            byte[] file = bytes(workbook);
+            var preview = upload(file, "template.xlsx", true);
+            assertThat(preview.statusCode()).as(preview.body()).isEqualTo(200);
+            var report = json.readTree(preview.body());
+            assertThat(report.get("rows").size()).isEqualTo(1);
+            assertProfile(report.get("rows").get(0).get("employee"));
+            assertThat(count()).isZero();
+            var imported = upload(file, "template.xlsx", false);
+            assertThat(imported.statusCode()).as(imported.body()).isEqualTo(201);
+            assertStoredProfile();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void importsAllProfileFieldsWithReorderedEnglishHeadersInBothFormats(boolean xlsx) throws Exception {
+        try (Workbook workbook = xlsx ? new XSSFWorkbook() : new HSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet();Row header = sheet.createRow(0);Row row = sheet.createRow(1);
+            for (int i = 0; i < PROFILE_HEADERS.length; i++) {
+                int column = PROFILE_HEADERS.length - i - 1;
+                header.createCell(column).setCellValue(PROFILE_HEADERS[i]);
+                setValue(row.createCell(column), PROFILE_VALUES[i]);
+            }
+            var response = upload(bytes(workbook), "profile." + (xlsx ? "xlsx" : "xls"), false);
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(201);
+            assertStoredProfile();
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"birthDate,1404/12/30,تاریخ تولد", "hireDate,1404/07/31,تاریخ استخدام",
+        "marineExperience,-0.01,سابقه دریایی", "marineExperience,100.01,سابقه دریایی", "marineExperience,۱۲٫۵۶۷,سابقه دریایی",
+        "grade,not-a-number,مقطع تحصیلی", "grade,۱۰۱,مقطع تحصیلی", "grade,1.234,مقطع تحصیلی",
+        "gender,OTHER,جنسیت", "lastMarineRank,UNKNOWN,آخرین درجه دریایی"})
+    void invalidProfileFieldReportsItsRowAndPreventsTheEntireImport(String field, String value, String label) throws Exception {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet();headers(sheet, "personnelCode", "firstName", "lastName", field);
+            Row valid = sheet.createRow(1);valid.createCell(0).setCellValue("VALID");valid.createCell(1).setCellValue("نام");valid.createCell(2).setCellValue("خانوادگی");
+            Row invalid = sheet.createRow(2);invalid.createCell(0).setCellValue("INVALID");invalid.createCell(1).setCellValue("نام");invalid.createCell(2).setCellValue("خانوادگی");invalid.createCell(3).setCellValue(value);
+            var response = upload(bytes(workbook), "profile.xlsx", false);
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(422);
+            var report = json.readTree(response.body());
+            assertThat(report.get("validCount").asInt()).isEqualTo(1);
+            assertThat(report.get("errorCount").asInt()).isEqualTo(1);
+            assertThat(report.get("rows").get(1).get("rowNumber").asInt()).isEqualTo(3);
+            assertThat(report.get("rows").get(1).get("errors").toString()).contains(label).doesNotContain("null:");
+            assertThat(count()).isZero();
+        }
+    }
+
+    @Test
+    void validatesStoredNumericPrecisionAndRejectsNumericDatesFormulasAndOversizedProfileText() throws Exception {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet();headers(sheet, PROFILE_HEADERS);
+            Row row = sheet.createRow(1);
+            for (int i = 0; i < PROFILE_VALUES.length; i++) setValue(row.createCell(i), PROFILE_VALUES[i]);
+            row.getCell(5).setCellValue(45000); // birthDate: Excel date serials are not Jalali text
+            row.getCell(16).setCellValue(45000); // hireDate
+            row.getCell(6).setCellValue(1.234);
+            var style = workbook.createCellStyle();style.setDataFormat(workbook.createDataFormat().getFormat("0.00"));
+            row.getCell(6).setCellStyle(style); // displayed as 1.23; must not silently round
+            row.getCell(15).setCellFormula("1+1");
+            for (int i = 8; i <= 14; i++) row.getCell(i).setCellValue("x".repeat(201));
+            var response = upload(bytes(workbook), "profile.xlsx", false);
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(422);
+            var errors = json.readTree(response.body()).get("rows").get(0).get("errors");
+            assertThat(errors.size()).isEqualTo(11);
+            for (int i : new int[]{5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16}) assertThat(errors.toString()).contains(PROFILE_PERSIAN_HEADERS[i]);
+            assertThat(errors.toString()).contains("Text", "فرمول", "دو رقم اعشار", "طول متن");
+            assertThat(count()).isZero();
+        }
+    }
+
+    private void assertStoredProfile() throws Exception {
+        assertThat(count()).isEqualTo(1);
+        var response = http.send(HttpRequest.newBuilder(uri("/api/employees")).GET().build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertProfile(json.readTree(response.body()).get(0));
+        assertThat(jdbc.queryForObject("SELECT hire_date FROM employees", java.sql.Date.class).toLocalDate().toString()).isEqualTo("2021-03-20");
+    }
+
+    private void assertProfile(JsonNode employee) {
+        for (int i = 0; i < PROFILE_HEADERS.length; i++) {
+            String field = PROFILE_HEADERS[i];
+            switch (field) {
+                case "marineExperience" -> assertThat(employee.get(field).asDouble()).isEqualTo(12.5);
+                case "grade" -> assertThat(employee.get(field).asDouble()).isZero();
+                case "startDate" -> assertThat(employee.get(field).asText()).isEqualTo("1403-01-01");
+                case "birthDate" -> assertThat(employee.get(field).asText()).isEqualTo("1370-01-02");
+                case "hireDate" -> assertThat(employee.get(field).asText()).isEqualTo("1399-12-30");
+                case "gender" -> assertThat(employee.get(field).asText()).isEqualTo("FEMALE");
+                case "lastMarineRank" -> assertThat(employee.get(field).asText()).isEqualTo("NAKHDA_BANI");
+                case "educationLevel" -> assertThat(employee.get(field).asText()).isEqualTo("DOCTORATE");
+                default -> assertThat(employee.get(field).asText()).as(field).isEqualTo(PROFILE_VALUES[i].toString().strip());
+            }
+        }
+    }
+
+    private static void setValue(Cell cell, Object value) {
+        if (value instanceof Number number) cell.setCellValue(number.doubleValue());
+        else cell.setCellValue(value.toString());
     }
 
     private int count() { return jdbc.queryForObject("SELECT COUNT(*) FROM employees", Integer.class); }

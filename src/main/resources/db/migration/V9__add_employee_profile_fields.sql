@@ -1,0 +1,43 @@
+ALTER TABLE employees ADD COLUMN birth_date DATE;
+ALTER TABLE employees ADD COLUMN marine_experience DECIMAL(5,2);
+ALTER TABLE employees ADD COLUMN gender VARCHAR(10);
+ALTER TABLE employees ADD COLUMN bachelor_major VARCHAR(200);
+ALTER TABLE employees ADD COLUMN bachelor_university VARCHAR(200);
+ALTER TABLE employees ADD COLUMN master_major VARCHAR(200);
+ALTER TABLE employees ADD COLUMN master_university VARCHAR(200);
+ALTER TABLE employees ADD COLUMN doctoral_major VARCHAR(200);
+ALTER TABLE employees ADD COLUMN doctoral_university VARCHAR(200);
+ALTER TABLE employees ADD COLUMN speciality VARCHAR(200);
+ALTER TABLE employees ADD COLUMN grade DECIMAL(5,2);
+ALTER TABLE employees ADD COLUMN hire_date DATE;
+ALTER TABLE employees ADD COLUMN last_marine_rank VARCHAR(30);
+
+-- CASE avoids H2 2.4.240's cross-session CHECK (IN ...) bug.
+ALTER TABLE employees ADD CONSTRAINT chk_employee_gender
+    CHECK (gender IS NULL OR CASE gender
+        WHEN 'MALE' THEN TRUE
+        WHEN 'FEMALE' THEN TRUE
+        ELSE FALSE
+    END);
+
+ALTER TABLE employees ADD CONSTRAINT chk_employee_last_marine_rank
+    CHECK (last_marine_rank IS NULL OR CASE last_marine_rank
+        WHEN 'DRYASALAR' THEN TRUE
+        WHEN 'AMIRNEMAT' THEN TRUE
+        WHEN 'DRYADAR' THEN TRUE
+        WHEN 'DRYANAVARD' THEN TRUE
+        WHEN 'NAKHDA_BANI' THEN TRUE
+        WHEN 'NAKHDA_DOUM' THEN TRUE
+        WHEN 'NAKHDA_SOOM' THEN TRUE
+        WHEN 'NAKHDA_CHAHARUM' THEN TRUE
+        WHEN 'NAKHDA_PANJUM' THEN TRUE
+        WHEN 'NAKHDA_SHESHUM' THEN TRUE
+        WHEN 'NAKHDA_HAFTUM' THEN TRUE
+        WHEN 'NAKHDA_HASHTUM' THEN TRUE
+        WHEN 'NAKHDA_NOHUM' THEN TRUE
+        WHEN 'NAKHDA_DAHUM' THEN TRUE
+        WHEN 'NAKHDA_YAZDAHUM' THEN TRUE
+        WHEN 'NAKHDA_DOVAZHDAHUM' THEN TRUE
+        WHEN 'NAKHDA_SEYAZDAHUM' THEN TRUE
+        ELSE FALSE
+    END);

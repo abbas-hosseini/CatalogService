@@ -1,6 +1,7 @@
 package com.example.webapp.catalog;
 
 import com.example.webapp.security.AccessControl;
+import com.github.mfathi91.time.PersianDate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -64,6 +65,12 @@ public class CatalogService {
         return repository.save(Catalog.EMPLOYEES, id, fields("personnel_code", clean(r.personnelCode()),
             "first_name", clean(r.firstName()), "last_name", clean(r.lastName()),
             "education_level", r.educationLevel(), "start_date", r.startDate(),
+            "birth_date", calendarDate(r.birthDate()), "marine_experience", r.marineExperience(), "gender", r.gender(),
+            "bachelor_major", clean(r.bachelorMajor()), "bachelor_university", clean(r.bachelorUniversity()),
+            "master_major", clean(r.masterMajor()), "master_university", clean(r.masterUniversity()),
+            "doctoral_major", clean(r.doctoralMajor()), "doctoral_university", clean(r.doctoralUniversity()),
+            "speciality", clean(r.speciality()), "grade", r.grade(), "hire_date", calendarDate(r.hireDate()),
+            "last_marine_rank", r.lastMarineRank(),
             "description", clean(r.description())));
     }
 
@@ -171,6 +178,11 @@ public class CatalogService {
     }
 
     private static String clean(String value) { return value == null || value.isBlank() ? null : value.strip(); }
+
+    // V9 uses SQL DATE for these two columns; the employee API accepts and returns Jalali dates.
+    private static Date calendarDate(String jalali) {
+        return jalali == null ? null : Date.valueOf(PersianDate.parse(jalali).toGregorian());
+    }
 
     private static Map<String, Object> fields(Object... pairs) {
         Map<String, Object> result = new LinkedHashMap<>();

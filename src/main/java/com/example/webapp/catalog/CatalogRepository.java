@@ -1,5 +1,6 @@
 package com.example.webapp.catalog;
 
+import com.github.mfathi91.time.PersianDate;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -38,7 +39,13 @@ public class CatalogRepository {
                 else { key.append(uppercase ? Character.toUpperCase(c) : c); uppercase = false; }
             }
             Object value = rs.getObject(i);
-            row.put(key.toString(), value instanceof Date date ? date.toLocalDate().toString() : value);
+            if (value instanceof Date date) {
+                if (column.equals("birth_date") || column.equals("hire_date")) {
+                    var jalali = PersianDate.fromGregorian(date.toLocalDate());
+                    value = String.format(Locale.ROOT, "%04d-%02d-%02d", jalali.getYear(), jalali.getMonthValue(), jalali.getDayOfMonth());
+                } else value = date.toLocalDate().toString();
+            }
+            row.put(key.toString(), value);
         }
         return row;
     }

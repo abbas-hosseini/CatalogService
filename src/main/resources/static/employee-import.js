@@ -18,9 +18,10 @@ function renderEmployeeImport() {
   $('employee-import-status').textContent=`${number(report.rows.length)} ردیف: ${number(report.validCount)} معتبر، ${number(report.errorCount)} دارای خطا. ${report.message}`;
   $('employee-import-filter-label').hidden=report.errorCount===0;
   const rows=report.rows.filter(row=>!$('employee-import-errors-only').checked||row.errors.length);
-  $('employee-import-results').innerHTML=`<div class="data-panel table-wrap"><table><caption class="muted">پیش‌نمایش اطلاعات فایل؛ شمارهٔ ردیف مطابق اکسل است.</caption><thead><tr><th scope="col">ردیف</th><th scope="col">کد پرسنلی</th><th scope="col">نام و نام خانوادگی</th><th scope="col">مدرک تحصیلی</th><th scope="col">تاریخ شروع به کار</th><th scope="col">توضیحات</th><th scope="col">وضعیت</th></tr></thead><tbody>${rows.map(row=>{
+  const fields=sections.employees.fields;
+  $('employee-import-results').innerHTML=`<div class="data-panel table-wrap" tabindex="0" role="region" aria-label="پیش‌نمایش همه ستون‌های اکسل"><table><caption class="muted">پیش‌نمایش اطلاعات فایل؛ شمارهٔ ردیف مطابق اکسل است. برای دیدن همهٔ ستون‌ها جدول را افقی پیمایش کنید.</caption><thead><tr><th scope="col">ردیف</th><th scope="col">وضعیت</th>${fields.map(field=>`<th scope="col">${escapeHtml(field.label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>{
     const employee=row.employee;
-    return `<tr class="${row.errors.length?'import-invalid':''}"><td>${number(row.rowNumber)}</td><td><span class="code">${escapeHtml(employee.personnelCode)}</span></td><td>${escapeHtml(`${employee.firstName||''} ${employee.lastName||''}`)}</td><td>${escapeHtml(educationLevels[employee.educationLevel]||employee.educationLevel||'ثبت نشده')}</td><td>${jalaliDateCell(employee.startDate)}</td><td class="import-description">${escapeHtml(employee.description||'—')}</td><td class="import-row-status">${row.errors.length?`<ul>${row.errors.map(error=>`<li>${escapeHtml(error)}</li>`).join('')}</ul>`:'<span class="badge">آمادهٔ ثبت</span>'}</td></tr>`;
+    return `<tr class="${row.errors.length?'import-invalid':''}"><td>${number(row.rowNumber)}</td><td class="import-row-status">${row.errors.length?`<ul>${row.errors.map(error=>`<li>${escapeHtml(error)}</li>`).join('')}</ul>`:'<span class="badge">آمادهٔ ثبت</span>'}</td>${fields.map(field=>`<td class="import-description">${field.type==='jalali'&&employee[field.name]?jalaliDateCell(employee[field.name]):`<span${['personnelCode','lastMarineRank'].includes(field.name)?' class="code"':''}>${escapeHtml(employeeValue(field,employee[field.name]))}</span>`}</td>`).join('')}</tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
@@ -37,6 +38,7 @@ async function uploadEmployeeFile(file, commit) {
 
 async function processEmployeeImport(commit) {
   if(state.busy)return;
+  if(!can('employees','import'))return deniedAction();
   const file=commit?employeeImportFile:$('employee-import-file').files[0];
   if(commit&&(!employeeImportReport||employeeImportReport.errorCount||!file))return;
   $('employee-import-error').hidden=true;
@@ -77,6 +79,7 @@ async function processEmployeeImport(commit) {
 
 $('import-employees-button').onclick=()=>{
   if(state.busy)return;
+  if(!can('employees','import'))return deniedAction();
   resetEmployeeImport();$('employee-import-file').value='';$('employee-import-dialog').showModal();
 };
 $('employee-import-file').addEventListener('change',resetEmployeeImport);

@@ -33,12 +33,17 @@ public class ApiExceptionHandler {
         Map<String, String> fields = new LinkedHashMap<>();
         e.getBindingResult().getFieldErrors().forEach(error -> fields.putIfAbsent(error.getField(), switch (Objects.requireNonNullElse(error.getCode(), "")) {
             case "NotNull", "NotBlank" -> "تکمیل این فیلد الزامی است.";
-            case "DecimalMin", "DecimalMax" -> error.getField().equals("durationHours") ? "مدت دوره باید بیشتر از صفر و حداکثر ۱۰۰۰۰ ساعت باشد." : "نمره باید بین ۰ تا ۱۰۰ باشد.";
+            case "DecimalMin", "DecimalMax" -> error.getField().equals("durationHours") ? "مدت دوره باید بیشتر از صفر و حداکثر ۱۰۰۰۰ ساعت باشد." : "مقدار باید بین ۰ تا ۱۰۰ باشد.";
             case "Digits" -> "حداکثر دو رقم اعشار مجاز است.";
             case "PastOrPresent" -> "تاریخ نمی‌تواند در آینده باشد.";
             case "JalaliDate" -> "تاریخ شمسی معتبر با قالب ۱۴۰۳/۰۱/۰۱ وارد کنید (سال ۰۰۰۱ تا ۱۹۹۹).";
             case "Size" -> "طول متن بیشتر از حد مجاز است.";
-            case "Pattern" -> error.getField().equals("educationLevel") ? "مدرک تحصیلی را از گزینه‌های موجود انتخاب کنید." : "مقدار واردشده معتبر نیست.";
+            case "Pattern" -> switch (error.getField()) {
+                case "educationLevel" -> "مدرک تحصیلی را از گزینه‌های موجود انتخاب کنید.";
+                case "gender" -> "جنسیت را از گزینه‌های موجود انتخاب کنید.";
+                case "lastMarineRank" -> "آخرین درجه دریایی را از گزینه‌های موجود انتخاب کنید.";
+                default -> "مقدار واردشده معتبر نیست.";
+            };
             default -> "مقدار واردشده معتبر نیست.";
         }));
         return ResponseEntity.badRequest().body(Map.of("message", "لطفاً فیلدهای مشخص‌شده را اصلاح کنید.", "fields", fields));

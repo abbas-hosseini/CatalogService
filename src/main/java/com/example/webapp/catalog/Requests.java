@@ -30,9 +30,24 @@ public final class Requests {
         @NotBlank @Size(max = 80) String lastName,
         @Pattern(regexp = "BELOW_DIPLOMA|DIPLOMA|ASSOCIATE|BACHELOR|MASTER|DOCTORATE") String educationLevel,
         @JalaliDate String startDate,
+        @JalaliDate String birthDate,
+        @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal marineExperience,
+        @Pattern(regexp = "MALE|FEMALE") String gender,
+        @Size(max = 200) String bachelorMajor,
+        @Size(max = 200) String bachelorUniversity,
+        @Size(max = 200) String masterMajor,
+        @Size(max = 200) String masterUniversity,
+        @Size(max = 200) String doctoralMajor,
+        @Size(max = 200) String doctoralUniversity,
+        @Size(max = 200) String speciality,
+        @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal grade,
+        @JalaliDate String hireDate,
+        @Pattern(regexp = "DRYASALAR|AMIRNEMAT|DRYADAR|DRYANAVARD|NAKHDA_BANI|NAKHDA_DOUM|NAKHDA_SOOM|NAKHDA_CHAHARUM|NAKHDA_PANJUM|NAKHDA_SHESHUM|NAKHDA_HAFTUM|NAKHDA_HASHTUM|NAKHDA_NOHUM|NAKHDA_DAHUM|NAKHDA_YAZDAHUM|NAKHDA_DOVAZHDAHUM|NAKHDA_SEYAZDAHUM") String lastMarineRank,
         @Size(max = 2000) String description) {
         public Employee {
             startDate = JalaliDates.normalize(startDate);
+            birthDate = JalaliDates.normalize(birthDate);
+            hireDate = JalaliDates.normalize(hireDate);
         }
     }
 

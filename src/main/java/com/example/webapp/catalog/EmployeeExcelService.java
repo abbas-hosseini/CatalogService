@@ -9,15 +9,25 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.*;
 
 @Service
 public class EmployeeExcelService {
     static final long MAX_BYTES = 5 * 1024 * 1024;
     static final int MAX_ROWS = 1000;
-    private static final Map<String, String> LABELS = Map.of(
-        "personnelCode", "کد پرسنلی", "firstName", "نام", "lastName", "نام خانوادگی",
-        "educationLevel", "مدرک تحصیلی", "startDate", "تاریخ شروع به کار (شمسی)", "description", "توضیحات");
+    private static final Map<String, String> LABELS = Map.ofEntries(
+        Map.entry("personnelCode", "کد پرسنلی"), Map.entry("firstName", "نام"), Map.entry("lastName", "نام خانوادگی"),
+        Map.entry("educationLevel", "مدرک تحصیلی"), Map.entry("startDate", "تاریخ شروع به کار (شمسی)"),
+        Map.entry("birthDate", "تاریخ تولد (شمسی)"), Map.entry("hireDate", "تاریخ استخدام (شمسی)"),
+        Map.entry("gender", "جنسیت"), Map.entry("marineExperience", "سابقه دریایی (سال)"),
+        Map.entry("bachelorMajor", "رشته کارشناسی"), Map.entry("bachelorUniversity", "دانشگاه کارشناسی"),
+        Map.entry("masterMajor", "رشته کارشناسی ارشد"), Map.entry("masterUniversity", "دانشگاه کارشناسی ارشد"),
+        Map.entry("doctoralMajor", "رشته دکتری"), Map.entry("doctoralUniversity", "دانشگاه دکتری"),
+        Map.entry("speciality", "تخصص"), Map.entry("grade", "مقطع تحصیلی"),
+        Map.entry("lastMarineRank", "آخرین درجه دریایی"), Map.entry("description", "توضیحات"));
+    private static final Set<String> DATE_FIELDS = Set.of("startDate", "birthDate", "hireDate");
+    private static final Set<String> DECIMAL_FIELDS = Set.of("marineExperience", "grade");
     private final CatalogRepository repository;
     private final CatalogService catalog;
     private final Validator validator;
@@ -75,9 +85,17 @@ public class EmployeeExcelService {
                 }
                 String education = education(values.get("educationLevel"));
                 var employee = new Requests.Employee(values.get("personnelCode"), values.get("firstName"),
-                    values.get("lastName"), education, values.get("startDate"), values.get("description"));
+                    values.get("lastName"), education, values.get("startDate"), values.get("birthDate"),
+                    decimal(values.get("marineExperience"), "marineExperience", errors), gender(values.get("gender")),
+                    values.get("bachelorMajor"), values.get("bachelorUniversity"),
+                    values.get("masterMajor"), values.get("masterUniversity"),
+                    values.get("doctoralMajor"), values.get("doctoralUniversity"), values.get("speciality"),
+                    decimal(values.get("grade"), "grade", errors), values.get("hireDate"),
+                    values.get("lastMarineRank") == null ? null : values.get("lastMarineRank").toUpperCase(Locale.ROOT),
+                    values.get("description"));
                 validator.validate(employee).stream().sorted(Comparator.comparing(v -> v.getPropertyPath().toString()))
-                    .forEach(v -> errors.add(LABELS.get(v.getPropertyPath().toString()) + ": " + validationMessage(v.getConstraintDescriptor().getAnnotation().annotationType().getSimpleName())));
+                    .forEach(v -> errors.add(LABELS.get(v.getPropertyPath().toString()) + ": " + validationMessage(
+                        v.getPropertyPath().toString(), v.getConstraintDescriptor().getAnnotation().annotationType().getSimpleName())));
                 rows.add(new ImportRow(i + 1, employee, errors));
             }
         } catch (CatalogException e) {
@@ -118,6 +136,19 @@ public class EmployeeExcelService {
                 case "نامخانوادگی", "lastname" -> "lastName";
                 case "مدرکتحصیلی", "educationlevel" -> "educationLevel";
                 case "تاریخشروعبهکار(شمسی)", "تاریخشروعبهکار", "startdate" -> "startDate";
+                case "تاریختولد(شمسی)", "تاریختولد", "birthdate" -> "birthDate";
+                case "تاریخاستخدام(شمسی)", "تاریخاستخدام", "hiredate" -> "hireDate";
+                case "جنسیت", "gender" -> "gender";
+                case "سابقهدریایی(سال)", "سابقهدریایی", "marineexperience" -> "marineExperience";
+                case "رشتهکارشناسی", "bachelormajor" -> "bachelorMajor";
+                case "دانشگاهکارشناسی", "bacheloruniversity" -> "bachelorUniversity";
+                case "رشتهکارشناسیارشد", "mastermajor" -> "masterMajor";
+                case "دانشگاهکارشناسیارشد", "masteruniversity" -> "masterUniversity";
+                case "رشتهدکتری", "doctoralmajor" -> "doctoralMajor";
+                case "دانشگاهدکتری", "doctoraluniversity" -> "doctoralUniversity";
+                case "تخصص", "speciality" -> "speciality";
+                case "مقطعتحصیلی", "grade" -> "grade";
+                case "آخریندرجهدریایی", "lastmarinerank" -> "lastMarineRank";
                 case "توضیحات", "description" -> "description";
                 default -> throw new CatalogException(400, "عنوان ستون " + (cell.getColumnIndex() + 1) + " شناخته نشد. از قالب نمونه استفاده کنید.");
             };
@@ -141,9 +172,17 @@ public class EmployeeExcelService {
             errors.add(LABELS.get(field) + ": مقدار مستقیم وارد کنید؛ فرمول، خطای اکسل و مقدار منطقی مجاز نیست.");
             return null;
         }
-        if (field.equals("startDate") && cell.getCellType() == CellType.NUMERIC) {
-            errors.add("تاریخ شروع به کار باید متن شمسی مانند ۱۴۰۳/۰۱/۰۱ باشد؛ قالب سلول را Text قرار دهید.");
+        if (DATE_FIELDS.contains(field) && cell.getCellType() == CellType.NUMERIC) {
+            errors.add(LABELS.get(field) + ": باید متن شمسی مانند ۱۴۰۳/۰۱/۰۱ باشد؛ قالب سلول را Text قرار دهید.");
             return null;
+        }
+        if (DECIMAL_FIELDS.contains(field) && cell.getCellType() == CellType.NUMERIC) {
+            if (DateUtil.isCellDateFormatted(cell)) {
+                errors.add(LABELS.get(field) + ": عدد وارد کنید؛ تاریخ اکسل مجاز نیست.");
+                return null;
+            }
+            // Validate the stored number, even when Excel's display format rounds it.
+            return BigDecimal.valueOf(cell.getNumericCellValue()).stripTrailingZeros().toPlainString();
         }
         if (field.equals("personnelCode") && cell.getCellType() == CellType.NUMERIC &&
             (cell.getNumericCellValue() < 0 || cell.getNumericCellValue() != Math.rint(cell.getNumericCellValue()) || cell.getNumericCellValue() >= 1e15))
@@ -169,11 +208,43 @@ public class EmployeeExcelService {
         };
     }
 
-    private static String validationMessage(String constraint) {
+    private static BigDecimal decimal(String value, String field, List<String> errors) {
+        if (value == null) return null;
+        var normalized = new StringBuilder();
+        for (char c : value.toCharArray()) {
+            if (c >= '۰' && c <= '۹') normalized.append((char) ('0' + c - '۰'));
+            else if (c >= '٠' && c <= '٩') normalized.append((char) ('0' + c - '٠'));
+            else normalized.append(c == '٫' ? '.' : c);
+        }
+        try {
+            if (!normalized.toString().matches("[+-]?[0-9]+(?:\\.[0-9]+)?")) throw new NumberFormatException();
+            return new BigDecimal(normalized.toString()).stripTrailingZeros();
+        } catch (NumberFormatException e) {
+            errors.add(LABELS.get(field) + ": عدد معتبر مانند ۱۲٫۵ وارد کنید.");
+            return null;
+        }
+    }
+
+    private static String gender(String value) {
+        if (value == null) return null;
+        return switch (normalizeLabel(value)) {
+            case "مرد", "male" -> "MALE";
+            case "زن", "female" -> "FEMALE";
+            default -> value;
+        };
+    }
+
+    private static String validationMessage(String field, String constraint) {
         return switch (constraint) {
             case "NotBlank" -> "تکمیل این مقدار الزامی است.";
             case "Size" -> "طول متن بیشتر از حد مجاز است.";
-            case "Pattern" -> "یکی از مدارک تحصیلی درج‌شده در قالب نمونه را وارد کنید.";
+            case "Pattern" -> switch (field) {
+                case "gender" -> "مرد یا زن (MALE یا FEMALE) وارد کنید.";
+                case "lastMarineRank" -> "یکی از کدهای درجه دریایی درج‌شده در قالب نمونه را وارد کنید.";
+                default -> "یکی از مدارک تحصیلی درج‌شده در قالب نمونه را وارد کنید.";
+            };
+            case "DecimalMin", "DecimalMax" -> "عدد باید بین ۰ و ۱۰۰ باشد.";
+            case "Digits" -> "عدد بین ۰ و ۱۰۰ و با حداکثر دو رقم اعشار وارد کنید.";
             case "JalaliDate" -> "تاریخ شمسی معتبر با قالب ۱۴۰۳/۰۱/۰۱ وارد کنید (سال ۰۰۰۱ تا ۱۹۹۹).";
             default -> "مقدار معتبر نیست.";
         };

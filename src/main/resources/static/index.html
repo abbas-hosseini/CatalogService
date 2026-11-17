@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#123d46"><title>شایستگی | مدیریت سرمایه انسانی</title>
-  <link rel="preload" href="/fonts/vazirmatn/Vazirmatn-Variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/auth.css"><script src="/auth.js" defer></script><script src="/app.js" defer></script><script src="/employee-import.js" defer></script>
+  <link rel="preload" href="/fonts/vazirmatn/Vazirmatn-Variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/auth.css"><link rel="stylesheet" href="/employee.css"><script src="/auth.js" defer></script><script src="/employee-fields.js" defer></script><script src="/app.js" defer></script><script src="/employee-import.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">رفتن به محتوای اصلی</a>
@@ -58,7 +58,8 @@
     <div class="dialog-body">
       <p class="form-hint">۱. قالب را دریافت و تکمیل کنید. ۲. فایل را بررسی کنید. ۳. پس از بررسی پیش‌نمایش، ثبت را تأیید کنید.</p>
       <a class="button secondary" href="/templates/employees-import.xlsx" download>دریافت قالب اکسل</a>
-      <p class="import-guide">فقط برگهٔ اول خوانده می‌شود. کد پرسنلی، نام و نام خانوادگی الزامی‌اند. تاریخ شروع به کار را به‌صورت متن شمسی مانند ۱۴۰۳/۰۱/۰۱ وارد کنید. برای حفظ صفرهای ابتدای کد، قالب سلول را Text قرار دهید.</p>
+      <p class="import-guide">فقط برگهٔ اول خوانده می‌شود. کد پرسنلی، نام و نام خانوادگی الزامی‌اند؛ بقیهٔ ستون‌ها اختیاری‌اند و فایل‌های قبلی نیز پذیرفته می‌شوند. تاریخ تولد، شروع به کار و استخدام را به‌صورت متن شمسی مانند ۱۴۰۳/۰۱/۰۱ وارد کنید. برای حفظ صفرهای ابتدای کد، قالب سلول را Text قرار دهید.</p>
+      <p class="import-guide">مدرک تحصیلی، جنسیت و آخرین درجه دریایی را از فهرست‌های قالب انتخاب کنید. سابقه دریایی (سال) و مقطع تحصیلی، مطابق فرم کارمند، عدد بین ۰ و ۱۰۰ با حداکثر دو رقم اعشار هستند. راهنمای همهٔ ستون‌ها در برگهٔ «راهنما» آمده است.</p>
       <div class="field"><label for="employee-import-file">فایل اکسل</label><input id="employee-import-file" type="file" accept=".xlsx,.xls" aria-describedby="employee-import-help"><span class="field-help" id="employee-import-help">xlsx یا xls، حداکثر ۵ مگابایت و ۱۰۰۰ ردیف اطلاعات.</span></div>
       <p class="import-guide">این بخش کارمندان جدید را ثبت می‌کند. کدهای تکراری و ردیف‌های نامعتبر باید در فایل اصلاح شوند؛ تا رفع همهٔ خطاها هیچ ردیفی ذخیره نمی‌شود. سمت‌های هر فرد را پس از ورود، در پروندهٔ او تعیین کنید.</p>
       <div id="employee-import-error" class="alert error" role="alert" hidden></div>
