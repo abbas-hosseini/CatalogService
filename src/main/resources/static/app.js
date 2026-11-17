@@ -43,7 +43,7 @@ const sections = {
   factors: {title:'عوامل ارزشیابی',singular:'عامل ارزشیابی',description:'شایستگی‌ها و شاخص‌های ارزیابی را در یک ساختار سلسله‌مراتبی تعریف کنید.',tree:true,fields:[codeField,titleField,refField('parentId','عامل بالادست','factors',false),descriptionField],columns:[['code','کد عامل'],['title','عنوان عامل'],['parentId','عامل بالادست','factors'],['description','توضیحات']]},
   jobs: {title:'ساختار مشاغل',singular:'شغل',description:'مشاغل هر شرکت و ارتباط آن‌ها با شغل بالادست در همان شرکت را مدیریت کنید.',tree:true,filter:'companyId',filterRef:'companies',fields:[refField('companyId','شرکت','companies'),codeField,titleField,refField('parentId','شغل بالادست','jobs',false),descriptionField],columns:[['code','کد شغل'],['title','عنوان شغل'],['companyId','شرکت','companies'],['parentId','شغل بالادست','jobs'],['description','توضیحات']]},
   companies: {title:'شرکت‌ها',singular:'شرکت',description:'شرکت‌ها را تعریف کنید و سمت کارکنان در هر شرکت را از پروندهٔ کارمند ثبت کنید.',fields:[codeField,field('title','نام شرکت','text',{required:true,max:160}),descriptionField],columns:[['code','کد شرکت'],['title','نام شرکت'],['description','توضیحات']]},
-  employees: {title:'کارمندان',singular:'کارمند',description:'مشخصات فردی، تحصیلات و سوابق شغلی و دریایی کارکنان را ثبت و در پروندهٔ هر فرد مشاهده کنید.',fields:employeeFormFields(),columns:[['personnelCode','کد پرسنلی'],['fullName','نام و نام خانوادگی'],['gender','جنسیت'],['positions','شرکت و سمت'],['educationLevel','مدرک تحصیلی'],['specialityId','تخصص','specialities'],['lastMarineRank','آخرین درجه دریایی'],['grade','سطح سازمانی','organizational-levels'],['startDate','شروع به کار (شمسی)'],['hireDate','استخدام (شمسی)']]},
+  employees: {title:'کارمندان',singular:'کارمند',description:'مشخصات فردی، تحصیلات و سوابق شغلی و دریایی کارکنان را ثبت و در پروندهٔ هر فرد مشاهده کنید.',fields:employeeFormFields(),columns:[['personnelCode','کد پرسنلی'],['fullName','نام و نام خانوادگی'],['assessmentScore','نمره ارزیابی'],['gender','جنسیت'],['positions','شرکت و سمت'],['educationLevel','مدرک تحصیلی'],['specialityId','تخصص','specialities'],['lastMarineRank','آخرین درجه دریایی'],['grade','سطح سازمانی','organizational-levels'],['startDate','شروع به کار (شمسی)'],['hireDate','استخدام (شمسی)']]},
   positions: {title:'سمت‌ها در شرکت‌ها',singular:'سمت',fields:[refField('companyId','شرکت','companies'),refField('jobId','سمت / شغل','jobs'),notesField],columns:[['companyId','شرکت','companies'],['jobId','سمت / شغل','jobs'],['notes','یادداشت']]},
   courses: {title:'دوره‌های آموزشی',singular:'دوره آموزشی',description:'فهرست دوره‌ها، برگزارکنندگان و مدت آموزش را تعریف کنید.',fields:[codeField,titleField,field('provider','برگزارکننده','text',{max:160}),field('durationHours','مدت دوره (ساعت)','decimal',{required:true,min:0.01,max:10000}),descriptionField],columns:[['code','کد دوره'],['title','عنوان دوره'],['provider','برگزارکننده'],['durationHours','مدت (ساعت)']]},
   trainings: {title:'سوابق آموزشی',singular:'سابقه آموزشی',description:'تاریخ شروع و پایان، ضریب تأثیر و پیوست‌های دوره‌های گذرانده‌شده را در پروندهٔ کارمند ثبت کنید.',filter:'employeeId',filterRef:'employees',fields:[refField('employeeId','کارمند','employees'),refField('courseId','دوره آموزشی','courses'),field('startDate','تاریخ شروع (میلادی)','date'),field('impactCoefficient','ضریب تأثیر (درصد)','decimal',{min:0,max:100,placeholder:'۰ تا ۱۰۰؛ مثلاً ۷۵٫۵'}),dateField('completionDate','تاریخ پایان (میلادی)'),scoreField('score','نمره دوره',false),field('certificateNumber','شماره گواهی','text',{max:100}),notesField],columns:[['employeeId','کارمند','employees'],['courseId','دوره آموزشی','courses'],['startDate','تاریخ شروع'],['completionDate','تاریخ پایان'],['impactCoefficient','ضریب تأثیر (درصد)'],['score','نمره'],['certificateNumber','شماره گواهی']]},
@@ -153,6 +153,7 @@ function cell(config,column,row) {
   if(key==='companyId'&&value==null)return '<span class="badge gray">شرکت مشخص نشده</span>';
   if(ref) { const text=label(ref,value);return text?escapeHtml(text):`<span class="badge gray">${key==='jobId'?'بدون شغل':key==='parentId'?'سطح اصلی':'—'}</span>`; }
   if(key==='fullName')return escapeHtml(`${row.firstName} ${row.lastName}`);
+  if(key==='assessmentScore')return value==null?'<span class="muted">ارزیابی ثبت نشده</span>':`<strong>${number(value)}</strong>`;
   if(key==='score'||key==='minimumScore')return value==null?'<span class="muted">—</span>':`<span class="score-cell"><strong>${number(value)}</strong><span class="score-track"><span class="score-fill" style="--score:${Number(value)}%"></span></span></span>`;
   if(key==='startDate'&&config===sections.trainings)return date(value);
   if(key==='impactCoefficient')return value==null?'—':`${number(value)}٪`;
@@ -230,9 +231,10 @@ function openForm(record=null,section=state.section,prefill={}) {
   if(section==='positions')$('form-hint').textContent+=' پس از انتخاب شرکت، فقط مشاغل همان شرکت قابل انتخاب‌اند.';
   $('form-fields').innerHTML=config.fields.map(f=>{
     const val=values[f.name]??(f.type==='date'&&f.required?today():'');
-    const attrs=`id="field-${f.name}" name="${f.name}" ${f.required?'required':''} aria-describedby="error-${f.name}${f.type==='jalali'?` help-${f.name}`:''}"`;
+    const attrs=`id="field-${f.name}" name="${f.name}" ${f.required?'required':''} aria-describedby="error-${f.name}${['jalali','computed'].includes(f.type)?` help-${f.name}`:''}"`;
     let input;
-    if(f.type==='select')input=`<select ${attrs}><option value="">${f.required?'انتخاب کنید…':f.name==='parentId'?'بدون بالادست (سطح اصلی)':'ثبت نشده'}</option>${options(f.ref,val,f.name==='parentId'?excludedDescendants(section,record?.id):new Set())}</select>`;
+    if(f.type==='computed')input=`<input ${attrs} type="text" readonly value="${escapeHtml(employeeValue(f,values[f.name]))}"><span class="field-help" id="help-${f.name}">${escapeHtml(f.help)}</span>`;
+    else if(f.type==='select')input=`<select ${attrs}><option value="">${f.required?'انتخاب کنید…':f.name==='parentId'?'بدون بالادست (سطح اصلی)':'ثبت نشده'}</option>${options(f.ref,val,f.name==='parentId'?excludedDescendants(section,record?.id):new Set())}</select>`;
     else if(f.type==='choice')input=`<select ${attrs}><option value="">ثبت نشده</option>${Object.entries(f.choices).map(([value,title])=>`<option value="${escapeHtml(value)}" ${value===val?'selected':''}>${escapeHtml(title)}</option>`).join('')}</select>`;
     else if(f.type==='textarea')input=`<textarea ${attrs} maxlength="${f.max}">${escapeHtml(val)}</textarea>`;
     else if(f.type==='jalali')input=`<input ${attrs} type="text" dir="ltr" value="${escapeHtml(val?jalaliDate(val):'')}" placeholder="۱۴۰۳/۰۱/۰۱" maxlength="10"><span class="field-help" id="help-${f.name}">سال/ماه/روز شمسی؛ ارقام فارسی یا انگلیسی پذیرفته می‌شوند.</span>`;
@@ -272,6 +274,7 @@ async function saveForm(event) {
   $('record-form').querySelectorAll('.field-error').forEach(i=>i.textContent='');
   const {section,id,jobId,employeeId}=state.editing,payload=section==='requirements'?{jobId}:section==='positions'?{employeeId}:{};let invalid=false;
   for(const f of sections[section].fields){
+    if(f.type==='computed')continue;
     const value=$(`field-${f.name}`).value.trim();
     if(f.required&&!value){fieldError(f.name,'تکمیل این فیلد الزامی است.');invalid=true;}
     if(!value)payload[f.name]=null;

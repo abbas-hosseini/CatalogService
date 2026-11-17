@@ -18,7 +18,7 @@ function renderEmployeeImport() {
   $('employee-import-status').textContent=`${number(report.rows.length)} ردیف: ${number(report.validCount)} معتبر، ${number(report.errorCount)} دارای خطا. ${report.message}`;
   $('employee-import-filter-label').hidden=report.errorCount===0;
   const rows=report.rows.filter(row=>!$('employee-import-errors-only').checked||row.errors.length);
-  const fields=sections.employees.fields;
+  const fields=sections.employees.fields.filter(field=>field.type!=='computed');
   $('employee-import-results').innerHTML=`<div class="data-panel table-wrap" tabindex="0" role="region" aria-label="پیش‌نمایش همه ستون‌های اکسل"><table><caption class="muted">پیش‌نمایش اطلاعات فایل؛ شمارهٔ ردیف مطابق اکسل است. برای دیدن همهٔ ستون‌ها جدول را افقی پیمایش کنید.</caption><thead><tr><th scope="col">ردیف</th><th scope="col">وضعیت</th>${fields.map(field=>`<th scope="col">${escapeHtml(field.label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>{
     const employee=row.employee;
     return `<tr class="${row.errors.length?'import-invalid':''}"><td>${number(row.rowNumber)}</td><td class="import-row-status">${row.errors.length?`<ul>${row.errors.map(error=>`<li>${escapeHtml(error)}</li>`).join('')}</ul>`:'<span class="badge">آمادهٔ ثبت</span>'}</td>${fields.map(field=>`<td class="import-description">${field.type==='jalali'&&employee[field.name]?jalaliDateCell(employee[field.name]):`<span${['personnelCode','lastMarineRank'].includes(field.name)?' class="code"':''}>${escapeHtml(employeeValue(field,employee[field.name]))}</span>`}</td>`).join('')}</tr>`;

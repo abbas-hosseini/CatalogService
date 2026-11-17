@@ -29,11 +29,13 @@ function employeeFormFields() {
     field('masterUniversity','دانشگاه کارشناسی ارشد','text',{max:200}),
     field('doctoralMajor','رشته دکتری','text',{max:200}),
     field('doctoralUniversity','دانشگاه دکتری','text',{max:200}),
-    {...descriptionField,group:'توضیحات'}
+    {...descriptionField,group:'توضیحات'},
+    field('assessmentScore','نمره ارزیابی','computed',{group:'ارزیابی',help:'این نمره توسط سیستم از نمرهٔ ارزیابی و سوابق آموزشی محاسبه می‌شود و قابل ویرایش نیست.'})
   ];
 }
 
 function employeeValue(field, value) {
+  if(field.type==='computed')return value==null?'ارزیابی ثبت نشده':number(value);
   if(value==null||value==='')return 'ثبت نشده';
   if(field.type==='choice')return field.choices[value]||value;
   if(field.type==='select')return label(field.ref,value)||'گزینه نامشخص';

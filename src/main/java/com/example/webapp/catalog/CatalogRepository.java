@@ -15,11 +15,17 @@ import java.util.stream.Collectors;
 @Repository
 public class CatalogRepository {
     private final NamedParameterJdbcTemplate jdbc;
+    private final EmployeeAssessmentScores assessmentScores;
 
-    public CatalogRepository(NamedParameterJdbcTemplate jdbc) { this.jdbc = jdbc; }
+    public CatalogRepository(NamedParameterJdbcTemplate jdbc, EmployeeAssessmentScores assessmentScores) {
+        this.jdbc = jdbc;
+        this.assessmentScores = assessmentScores;
+    }
 
     public List<Map<String, Object>> list(Catalog catalog) {
-        return jdbc.query("SELECT * FROM " + catalog.table + " ORDER BY id DESC", this::mapRow);
+        var rows = jdbc.query("SELECT * FROM " + catalog.table + " ORDER BY id DESC", this::mapRow);
+        if (catalog == Catalog.EMPLOYEES) assessmentScores.populate(rows);
+        return rows;
     }
 
     public List<Map<String, Object>> employeeScores(long employeeId) {
@@ -29,6 +35,7 @@ public class CatalogRepository {
 
     public Map<String, Object> find(Catalog catalog, long id) {
         var rows = jdbc.query("SELECT * FROM " + catalog.table + " WHERE id = :id", Map.of("id", id), this::mapRow);
+        if (catalog == Catalog.EMPLOYEES) assessmentScores.populate(rows);
         if (rows.isEmpty()) throw new CatalogException(404, "رکورد موردنظر پیدا نشد.");
         return rows.getFirst();
     }
