@@ -1,4 +1,4 @@
-package com.example.webapp;
+﻿package com.example.webapp;
 
 import com.example.webapp.security.SecurityTestClient;
 import com.example.webapp.security.SecurityTestConfiguration;
@@ -51,7 +51,7 @@ class EmployeeProfileApiTests {
     @Test void allProfileFieldsRoundTripNormalizeDatesAndCanBeEditedAndCleared() throws Exception {
         var body = employee();
         body.putAll(Map.of("educationLevel","DOCTORATE","startDate","۱۴۰۳/۰۱/۰۱","birthDate","١٣٧٠/١/٢","hireDate","۱۳۹۹/۱۲/۳۰",
-            "marineExperience",12.5,"gender","FEMALE","specialityId",specialityId,"grade",gradeId,"lastMarineRank","NAKHDA_BANI"));
+            "marineExperience",12.5,"gender","FEMALE","specialityId",specialityId,"grade",gradeId,"lastMarineRank","MASTER"));
         body.putAll(Map.of("bachelorMajor","مهندسی","bachelorUniversity","دانشگاه اول","masterMajor","مدیریت","masterUniversity","دانشگاه دوم",
             "doctoralMajor","حمل و نقل","doctoralUniversity","دانشگاه سوم","description","توضیحات کامل"));
         long id = create(body);

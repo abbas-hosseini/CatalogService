@@ -1,13 +1,20 @@
-'use strict';
+﻿'use strict';
 
 const employeeGenders = {MALE:'مرد',FEMALE:'زن'};
 // Keep the exact backend codes; display names do not change persisted values.
 // Persian rank titles will be supplied by the user later.
-const employeeMarineRanks = Object.fromEntries([
-  'DRYASALAR','AMIRNEMAT','DRYADAR','DRYANAVARD','NAKHDA_BANI','NAKHDA_DOUM','NAKHDA_SOOM',
-  'NAKHDA_CHAHARUM','NAKHDA_PANJUM','NAKHDA_SHESHUM','NAKHDA_HAFTUM','NAKHDA_HASHTUM',
-  'NAKHDA_NOHUM','NAKHDA_DAHUM','NAKHDA_YAZDAHUM','NAKHDA_DOVAZHDAHUM','NAKHDA_SEYAZDAHUM'
-].map(code=>[code,code]));
+const employeeMarineRanks = {
+  MASTER:'Master',
+  CHIEF_ENGINEER:'Chief Engineer',
+  CHIEF_OFFICER:'Chief Officer',
+  SECOND_ENGINEER:'2nd Engineer',
+  THIRD_OFFICER:'3rd Officer',
+  THIRD_ENGINEER:'3rd Engineer',
+  FOURTH_ENGINEER:'4th Engineer',
+  FIFTH_ENGINEER:'5th Engineer',
+  ELECTRONIC_OFFICER:'Electronic Officer',
+  RADIO_OFFICER:'Radio Officer'
+};
 
 function employeeFormFields() {
   return [

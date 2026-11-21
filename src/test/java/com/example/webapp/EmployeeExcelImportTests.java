@@ -1,4 +1,4 @@
-package com.example.webapp;
+﻿package com.example.webapp;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
@@ -42,7 +42,7 @@ class EmployeeExcelImportTests {
         "تاریخ تولد (شمسی)", "سابقه دریایی (سال)", "جنسیت", "رشته کارشناسی", "دانشگاه کارشناسی", "رشته کارشناسی ارشد", "دانشگاه کارشناسی ارشد",
         "رشته دکتری", "دانشگاه دکتری", "تخصص", "سطح سازمانی", "تاریخ استخدام (شمسی)", "آخرین درجه دریایی", "توضیحات"};
     static final Object[] PROFILE_VALUES = {"00042", "علی", "رضایی", "doctorate", "۱۴۰۳/۱/۱", "١٣٧٠/١/٢", 12.5, "زن",
-        "مهندسی دریا", "دانشگاه اول", "مدیریت", "دانشگاه دوم", "حمل و نقل", "دانشگاه سوم", "  مدیریت دریایی  ", "LEVEL-01", "۱۳۹۹/۱۲/۳۰", "nakhda_bani", "توضیحات کامل"};
+        "مهندسی دریا", "دانشگاه اول", "مدیریت", "دانشگاه دوم", "حمل و نقل", "دانشگاه سوم", "  مدیریت دریایی  ", "LEVEL-01", "۱۳۹۹/۱۲/۳۰", "master", "توضیحات کامل"};
 
     long specialityId, gradeId;
 
@@ -199,7 +199,7 @@ class EmployeeExcelImportTests {
             assertThat(sheet.getDataValidations()).hasSize(6);
             assertThat(workbook.getNumberOfSheets()).isEqualTo(3);
             assertThat(workbook.isSheetHidden(2)).isTrue();
-            assertThat(workbook.getName("MarineRanks").getRefersToFormula()).isEqualTo("'گزینه‌ها'!$A$2:$A$18");
+            assertThat(workbook.getName("MarineRanks").getRefersToFormula()).isEqualTo("'گزینه‌ها'!$A$2:$A$11");
             assertThat(workbook.getName("Specialities").getRefersToFormula()).isEqualTo("'گزینه‌ها'!$B$2:$B$2");
             assertThat(workbook.getName("OrganizationalLevels").getRefersToFormula()).isEqualTo("'گزینه‌ها'!$C$2:$C$2");
             assertThat(workbook.getSheet("گزینه‌ها").getRow(1).getCell(1).getStringCellValue()).isEqualTo("MARINE — مدیریت دریایی");
@@ -358,7 +358,7 @@ class EmployeeExcelImportTests {
                 case "birthDate" -> assertThat(employee.get(field).asText()).isEqualTo("1370-01-02");
                 case "hireDate" -> assertThat(employee.get(field).asText()).isEqualTo("1399-12-30");
                 case "gender" -> assertThat(employee.get(field).asText()).isEqualTo("FEMALE");
-                case "lastMarineRank" -> assertThat(employee.get(field).asText()).isEqualTo("NAKHDA_BANI");
+                case "lastMarineRank" -> assertThat(employee.get(field).asText()).isEqualTo("MASTER");
                 case "educationLevel" -> assertThat(employee.get(field).asText()).isEqualTo("DOCTORATE");
                 default -> assertThat(employee.get(field).asText()).as(field).isEqualTo(PROFILE_VALUES[i].toString().strip());
             }

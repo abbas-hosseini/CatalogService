@@ -1,4 +1,4 @@
-"""Build the blank, Persian employee import template shipped with the application."""
+﻿"""Build the blank, Persian employee import template shipped with the application."""
 from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.comments import Comment
@@ -20,7 +20,7 @@ NEW_FIELDS = [
     ("تاریخ استخدام (شمسی)", 30, "۱۳۹۹/۱۲/۳۰", DATE_HELP),
     ("سابقه دریایی (سال)", 26, "۱۲٫۵", NUMBER_HELP),
     ("تخصص", 38, "کد — عنوان تخصص", "اختیاری؛ گزینه‌ای از جدول تخصص‌ها انتخاب کنید. کد یا عنوان دقیق نیز پذیرفته می‌شود. پس از تغییر اطلاعات پایه قالب تازه دریافت کنید."),
-    ("آخرین درجه دریایی", 32, "NAKHDA_BANI", "اختیاری؛ کد را از فهرست انتخاب کنید. عنوان فارسی درجه‌ها هنوز تعیین نشده است."),
+    ("آخرین درجه دریایی", 32, "MASTER", "اختیاری؛ کد را از فهرست انتخاب کنید. عنوان فارسی درجه‌ها هنوز تعیین نشده است."),
     ("سطح سازمانی", 38, "کد — عنوان سطح", "اختیاری؛ گزینه‌ای از جدول سطوح سازمانی انتخاب کنید. کد یا عنوان دقیق نیز پذیرفته می‌شود. این فیلد مستقل از مدرک تحصیلی است."),
     ("رشته کارشناسی", 30, "مهندسی دریا", TEXT_HELP),
     ("دانشگاه کارشناسی", 34, "دانشگاه اول", TEXT_HELP),
@@ -30,9 +30,9 @@ NEW_FIELDS = [
     ("دانشگاه دکتری", 34, "دانشگاه سوم", TEXT_HELP),
 ]
 HEADERS += [item[0] for item in NEW_FIELDS]
-RANKS = ["DRYASALAR", "AMIRNEMAT", "DRYADAR", "DRYANAVARD", "NAKHDA_BANI", "NAKHDA_DOUM",
-         "NAKHDA_SOOM", "NAKHDA_CHAHARUM", "NAKHDA_PANJUM", "NAKHDA_SHESHUM", "NAKHDA_HAFTUM",
-         "NAKHDA_HASHTUM", "NAKHDA_NOHUM", "NAKHDA_DAHUM", "NAKHDA_YAZDAHUM", "NAKHDA_DOVAZHDAHUM", "NAKHDA_SEYAZDAHUM"]
+RANKS = ["MASTER", "CHIEF_ENGINEER", "CHIEF_OFFICER", "SECOND_ENGINEER", "THIRD_OFFICER",
+         "THIRD_ENGINEER", "FOURTH_ENGINEER", "FIFTH_ENGINEER", "ELECTRONIC_OFFICER", "RADIO_OFFICER"]
+
 
 workbook = Workbook()
 sheet = workbook.active
