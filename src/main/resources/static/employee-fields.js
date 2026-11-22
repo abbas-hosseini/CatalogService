@@ -28,6 +28,7 @@ function employeeFormFields() {
     refField('specialityId','تخصص','specialities',false),
     refField('grade','سطح سازمانی','organizational-levels',false),
     field('marineExperience','سابقه دریایی (سال)','decimal',{min:0,max:100,placeholder:'مثلاً ۱۲٫۵'}),
+    field('experienceYears','سابقه محاسبه‌شده (سال)','computed',{group:'اطلاعات شروع و سابقه',help:'مجموع سال‌های خدمت و ۱.۵ برابر سابقه دریایی.'}),
     field('lastMarineRank','آخرین درجه دریایی','choice',{choices:employeeMarineRanks}),
     field('educationLevel','مدرک تحصیلی','choice',{choices:educationLevels,group:'تحصیلات'}),
     field('bachelorMajor','رشته کارشناسی','text',{max:200}),

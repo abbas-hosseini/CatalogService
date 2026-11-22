@@ -6,9 +6,13 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -24,7 +28,10 @@ public class CatalogRepository {
 
     public List<Map<String, Object>> list(Catalog catalog) {
         var rows = jdbc.query("SELECT * FROM " + catalog.table + " ORDER BY id DESC", this::mapRow);
-        if (catalog == Catalog.EMPLOYEES) assessmentScores.populate(rows);
+        if (catalog == Catalog.EMPLOYEES) {
+            assessmentScores.populate(rows);
+            populateExperienceYears(rows);
+        }
         return rows;
     }
 
@@ -58,9 +65,38 @@ public class CatalogRepository {
 
     public Map<String, Object> find(Catalog catalog, long id) {
         var rows = jdbc.query("SELECT * FROM " + catalog.table + " WHERE id = :id", Map.of("id", id), this::mapRow);
-        if (catalog == Catalog.EMPLOYEES) assessmentScores.populate(rows);
-        if (rows.isEmpty()) throw new CatalogException(404, "رکورد موردنظر پیدا نشد.");
+        if (catalog == Catalog.EMPLOYEES) {
+            assessmentScores.populate(rows);
+            populateExperienceYears(rows);
+        }
+        if (rows.isEmpty()) throw new CatalogException(404, "Record not found.");
         return rows.getFirst();
+    }
+
+    private void populateExperienceYears(List<Map<String, Object>> employees) {
+        var today = PersianDate.fromGregorian(LocalDate.now(ZoneId.of("Asia/Tehran")));
+        for (var employee : employees) {
+            Integer workExperience = fullYears((String) employee.get("startDate"), today);
+            BigDecimal marine = (BigDecimal) employee.get("marineExperience");
+            if (workExperience == null) { employee.put("experienceYears", null); continue; }
+            if (marine == null) marine = BigDecimal.ZERO;
+            BigDecimal experience = BigDecimal.valueOf(workExperience)
+                .add(marine.multiply(new BigDecimal("1.5"))).setScale(2, RoundingMode.HALF_UP);
+            employee.put("experienceYears", experience);
+        }
+    }
+    private static Integer fullYears(String date, PersianDate today) {
+        if (date == null) return null;
+        try {
+            var start = PersianDate.parse(date);
+            if (start.toGregorian().isAfter(today.toGregorian())) return null;
+            int years = today.getYear() - start.getYear();
+            if (today.getMonthValue() < start.getMonthValue() ||
+                today.getMonthValue() == start.getMonthValue() && today.getDayOfMonth() < start.getDayOfMonth()) years--;
+            return years;
+        } catch (IllegalArgumentException | java.time.DateTimeException exception) {
+            return null;
+        }
     }
 
     private Map<String, Object> mapRow(ResultSet rs, int rowNum) throws SQLException {
@@ -125,7 +161,7 @@ public class CatalogRepository {
         if (id != null) {
             String assignments = fields.keySet().stream().map(k -> k + " = :" + k).collect(Collectors.joining(", "));
             int updated = jdbc.update("UPDATE " + catalog.table + " SET " + assignments + " WHERE id = :id", params.addValue("id", id));
-            if (updated == 0) throw new CatalogException(404, "رکورد موردنظر پیدا نشد.");
+            if (updated == 0) throw new CatalogException(404, "Record not found.");
             return id;
         }
         String columns = String.join(", ", fields.keySet());
@@ -137,7 +173,7 @@ public class CatalogRepository {
 
     public void delete(Catalog catalog, long id) {
         if (jdbc.update("DELETE FROM " + catalog.table + " WHERE id = :id", Map.of("id", id)) == 0)
-            throw new CatalogException(404, "رکورد موردنظر پیدا نشد.");
+            throw new CatalogException(404, "Record not found.");
     }
 
     public void lockTree(Catalog catalog) {
