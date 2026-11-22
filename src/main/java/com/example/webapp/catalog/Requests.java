@@ -43,7 +43,7 @@ public final class Requests {
         @Positive @JsonDeserialize(using = ReferenceIdDeserializer.class) Long specialityId,
         @Positive @JsonDeserialize(using = ReferenceIdDeserializer.class) Long grade,
         @JalaliDate String hireDate,
-        @Pattern(regexp = "DRYASALAR|AMIRNEMAT|DRYADAR|DRYANAVARD|NAKHDA_BANI|NAKHDA_DOUM|NAKHDA_SOOM|NAKHDA_CHAHARUM|NAKHDA_PANJUM|NAKHDA_SHESHUM|NAKHDA_HAFTUM|NAKHDA_HASHTUM|NAKHDA_NOHUM|NAKHDA_DAHUM|NAKHDA_YAZDAHUM|NAKHDA_DOVAZHDAHUM|NAKHDA_SEYAZDAHUM") String lastMarineRank,
+        @Pattern(regexp = "MASTER|CHIEF_ENGINEER|CHIEF_OFFICER|SECOND_ENGINEER|THIRD_OFFICER|THIRD_ENGINEER|FOURTH_ENGINEER|FIFTH_ENGINEER|ELECTRONIC_OFFICER|RADIO_OFFICER") String lastMarineRank,
         @Size(max = 2000) String description) {
         public Employee {
             startDate = JalaliDates.normalize(startDate);

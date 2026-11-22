@@ -1,4 +1,4 @@
-﻿package com.example.webapp;
+package com.example.webapp;
 
 import com.example.webapp.security.SecurityTestClient;
 import com.example.webapp.security.SecurityTestConfiguration;
