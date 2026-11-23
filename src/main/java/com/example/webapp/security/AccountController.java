@@ -35,6 +35,11 @@ public class AccountController {
     public UserAccounts.Profile update(@AuthenticationPrincipal UserPrincipal user, @Valid @RequestBody ProfileRequest request) {
         return accounts.updateProfile(user, request.displayName(), request.email());
     }
+    public record PreferencesRequest(@NotBlank @Size(max = 20) String theme) {}
+    @PutMapping("/api/account/preferences")
+    public UserAccounts.Profile preferences(@AuthenticationPrincipal UserPrincipal user, @Valid @RequestBody PreferencesRequest request) {
+        return accounts.updateTheme(user, request.theme());
+    }
     public record PasswordRequest(@NotBlank @Size(max = 128) String currentPassword,
                                   @NotBlank @Size(max = 128) String newPassword, @NotBlank @Size(max = 128) String confirmation) {}
     @PostMapping("/api/account/password")

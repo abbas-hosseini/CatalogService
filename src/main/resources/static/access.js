@@ -13,6 +13,7 @@ function accessBusy(busy) {
 }
 async function loadManagement() {
   accessElement('access-error').hidden=true;
+  await auth.json('/api/account');
   const mine=await auth.json('/api/access/me');
   if(!mine.permissions.includes('security.manage')) {
     accessElement('access-panel').hidden=true;

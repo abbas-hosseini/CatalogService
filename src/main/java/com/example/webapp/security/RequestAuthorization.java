@@ -15,7 +15,7 @@ public class RequestAuthorization {
         String path = request.getServletPath(), method = request.getMethod();
         boolean read = method.equals("GET") || method.equals("HEAD");
         if ((read && Set.of("/api/account", "/api/access/me", "/api/lookups").contains(path)) ||
-            (method.equals("PUT") && path.equals("/api/account")) ||
+            (method.equals("PUT") && Set.of("/api/account", "/api/account/preferences").contains(path)) ||
             (method.equals("POST") && Set.of("/api/account/password", "/api/auth/logout").contains(path))) return true;
         Set<String> permissions = access.permissions(user);
         if (path.equals("/access.html") || path.startsWith("/api/admin/")) return permissions.contains("security.manage");

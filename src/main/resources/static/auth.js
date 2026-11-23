@@ -27,6 +27,7 @@ const auth = (() => {
     if(response.status===204)return null;
     const body=await response.json().catch(()=>({message:'پاسخ سرور قابل خواندن نیست.'}));
     if(!response.ok){const error=new Error(body.message||'انجام درخواست ممکن نشد.');error.fields=body.fields;throw error;}
+    if(url==='/api/account'&&(!options.method||options.method.toUpperCase()==='GET')&&typeof appTheme!=='undefined')appTheme.apply(body.theme);
     return body;
   }
   async function logout() {

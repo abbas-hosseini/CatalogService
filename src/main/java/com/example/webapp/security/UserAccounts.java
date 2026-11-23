@@ -17,7 +17,8 @@ public class UserAccounts {
         this.dummyHash = encoder.encode(UUID.randomUUID().toString());
     }
     public record Account(long id, String username, String passwordHash, String displayName, String email, boolean enabled, long version) {}
-    public record Profile(String username, String displayName, String email) {}
+    public record Profile(String username, String displayName, String email, String theme) {}
+    private static final Set<String> THEMES = Set.of("classic", "ocean", "violet", "dark");
 
     public static String normalizeUsername(String username) {
         return username == null ? "" : username.strip().toLowerCase(Locale.ROOT);
@@ -51,13 +52,23 @@ public class UserAccounts {
             Integer.class, principal.id(), principal.credentialVersion()) == 1;
     }
     public Profile profile(UserPrincipal principal) {
-        var user = find(principal.username()).orElseThrow(() -> new CatalogException(401, "دوباره وارد شوید."));
-        return new Profile(user.username(), user.displayName(), user.email());
+        return jdbc.query("SELECT username, display_name, email, ui_theme FROM app_users WHERE id = ? AND credential_version = ? AND enabled = TRUE",
+            (rs, n) -> new Profile(rs.getString("username"), rs.getString("display_name"), rs.getString("email"), rs.getString("ui_theme")),
+            principal.id(), principal.credentialVersion()).stream().findFirst()
+            .orElseThrow(() -> new CatalogException(401, "دوباره وارد شوید."));
     }
     @Transactional
     public Profile updateProfile(UserPrincipal principal, String displayName, String email) {
         int updated = jdbc.update("UPDATE app_users SET display_name = ?, email = ? WHERE id = ? AND credential_version = ? AND enabled = TRUE",
             displayName.strip(), email == null || email.isBlank() ? null : email.strip(), principal.id(), principal.credentialVersion());
+        if (updated != 1) throw new CatalogException(401, "دوباره وارد شوید.");
+        return profile(principal);
+    }
+    @Transactional
+    public Profile updateTheme(UserPrincipal principal, String theme) {
+        if (theme == null || !THEMES.contains(theme)) throw new CatalogException(400, "یکی از تم‌های موجود را انتخاب کنید.");
+        int updated = jdbc.update("UPDATE app_users SET ui_theme = ? WHERE id = ? AND credential_version = ? AND enabled = TRUE",
+            theme, principal.id(), principal.credentialVersion());
         if (updated != 1) throw new CatalogException(401, "دوباره وارد شوید.");
         return profile(principal);
     }

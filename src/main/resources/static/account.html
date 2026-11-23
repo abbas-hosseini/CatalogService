@@ -1,10 +1,31 @@
 <!doctype html>
-<html lang="fa" dir="rtl">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>پروفایل کاربری | شایستگی</title><link rel="preload" href="/fonts/vazirmatn/Vazirmatn-Variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/auth.css"><script src="/auth.js" defer></script><script src="/account.js" defer></script></head>
+<html lang="fa" dir="rtl" data-theme="classic">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>پروفایل کاربری | شایستگی</title><link rel="preload" href="/fonts/vazirmatn/Vazirmatn-Variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/auth.css"><script src="/themes.js?v=20261123" defer></script><script src="/auth.js?v=20261123-themes" defer></script><script src="/account.js?v=20261123-themes" defer></script><link rel="stylesheet" href="/themes.css?v=20261123"></head>
 <body class="account-page">
   <header class="account-header"><a href="/" class="auth-brand"><span class="brand-symbol">ش</span><strong>شایستگی</strong></a><div class="page-actions"><a href="/" class="button secondary">بازگشت به سامانه</a><button id="account-logout" class="button secondary">خروج</button></div></header>
-  <main class="account-main"><div class="eyebrow">حساب کاربری</div><h1>پروفایل من</h1><p class="auth-intro">اطلاعات حساب و رمز ورود خود را مدیریت کنید.</p>
+  <main class="account-main"><div class="eyebrow">حساب کاربری</div><h1>پروفایل من</h1><p class="auth-intro">ظاهر برنامه، اطلاعات حساب و رمز ورود خود را مدیریت کنید.</p>
     <div id="account-error" class="alert error" role="alert" hidden></div><div id="account-success" class="alert success" role="status" hidden></div>
+    <section id="appearance" class="account-card appearance-card" aria-labelledby="appearance-title">
+      <div class="appearance-heading"><h2 id="appearance-title">ظاهر برنامه</h2><span id="theme-current" class="badge gray">در حال دریافت تنظیمات…</span></div>
+      <p class="auth-intro">نمونهٔ دلخواه را انتخاب کنید تا همین صفحه را با آن ببینید. با «ذخیره ظاهر»، تم برای حساب شما و ورودهای بعدی در دستگاه‌های دیگر هم ثبت می‌شود.</p>
+      <form id="theme-form"><fieldset id="theme-fieldset" class="theme-fieldset" disabled><legend>انتخاب تم رابط کاربری</legend><div class="theme-options"><label class="theme-option"><input type="radio" name="theme" value="classic" aria-label="سبز کلاسیک"><span class="theme-option-content">
+              <span class="theme-sample" data-palette="classic" aria-hidden="true"><span class="theme-sample-sidebar"><i></i><i></i><i></i><i></i></span><span class="theme-sample-main"><span class="theme-sample-banner"></span><span class="theme-sample-cards"><i></i><i></i><i></i></span><span class="theme-sample-table"></span></span></span>
+              <span class="theme-option-title">سبز کلاسیک</span><span class="theme-option-description">روشن و آشنا</span>
+            </span></label><label class="theme-option"><input type="radio" name="theme" value="ocean" aria-label="آبی اقیانوس"><span class="theme-option-content">
+              <span class="theme-sample" data-palette="ocean" aria-hidden="true"><span class="theme-sample-sidebar"><i></i><i></i><i></i><i></i></span><span class="theme-sample-main"><span class="theme-sample-banner"></span><span class="theme-sample-cards"><i></i><i></i><i></i></span><span class="theme-sample-table"></span></span></span>
+              <span class="theme-option-title">آبی اقیانوس</span><span class="theme-option-description">آبی و منظم</span>
+            </span></label><label class="theme-option"><input type="radio" name="theme" value="violet" aria-label="بنفش آرام"><span class="theme-option-content">
+              <span class="theme-sample" data-palette="violet" aria-hidden="true"><span class="theme-sample-sidebar"><i></i><i></i><i></i><i></i></span><span class="theme-sample-main"><span class="theme-sample-banner"></span><span class="theme-sample-cards"><i></i><i></i><i></i></span><span class="theme-sample-table"></span></span></span>
+              <span class="theme-option-title">بنفش آرام</span><span class="theme-option-description">ملایم و با گوشه‌های گرد</span>
+            </span></label><label class="theme-option"><input type="radio" name="theme" value="dark" aria-label="شب"><span class="theme-option-content">
+              <span class="theme-sample" data-palette="dark" aria-hidden="true"><span class="theme-sample-sidebar"><i></i><i></i><i></i><i></i></span><span class="theme-sample-main"><span class="theme-sample-banner"></span><span class="theme-sample-cards"><i></i><i></i><i></i></span><span class="theme-sample-table"></span></span></span>
+              <span class="theme-option-title">شب</span><span class="theme-option-description">زمینهٔ تیره و متن روشن</span>
+            </span></label></div></fieldset>
+        <div id="theme-error" class="alert error theme-error" role="alert" hidden></div>
+        <p id="theme-status" class="theme-status" role="status" aria-live="polite"></p>
+        <div class="theme-actions"><button id="theme-save" type="submit" class="button primary" disabled>ذخیره ظاهر</button><button id="theme-reset" type="button" class="button secondary" disabled>بازگشت به تم ذخیره‌شده</button></div>
+      </form>
+    </section>
     <div class="account-grid">
       <section class="account-card" aria-labelledby="account-details-title"><h2 id="account-details-title">اطلاعات کاربری</h2><form id="account-form">
         <div class="field"><label for="account-username">نام کاربری</label><input id="account-username" dir="ltr" readonly><span class="field-help">نام کاربری از این صفحه تغییر نمی‌کند.</span></div>
