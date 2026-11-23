@@ -13,7 +13,7 @@ public final class Permissions {
         new Group("specialities", "تخصص‌ها", List.of("view", "create", "edit", "delete")),
         new Group("organizational-levels", "سطوح سازمانی", List.of("view", "create", "edit", "delete")),
         new Group("factors", "عوامل ارزشیابی", List.of("view", "create", "edit", "delete")),
-        new Group("jobs", "ساختار مشاغل", List.of("view", "create", "edit", "delete")),
+        new Group("jobs", "ساختار مشاغل", List.of("view", "create", "edit", "delete", "import")),
         new Group("requirements", "شرایط احراز شغل", List.of("view", "create", "edit", "delete")),
         new Group("employees", "کارمندان", List.of("view", "create", "edit", "delete", "import")),
         new Group("employee-search", "جست‌وجوی کارکنان", List.of("view")),
