@@ -24,6 +24,9 @@ public class RequestAuthorization {
             return read && permissions.contains("employee-search.view") && permissions.contains("employees.view");
         if (path.equals("/templates/employees-import.xlsx")) return read && permissions.contains("employees.import");
         if (path.equals("/templates/jobs-import.xlsx")) return read && permissions.contains("jobs.import");
+        if (path.equals("/templates/courses-import.xlsx")) return read && permissions.contains("courses.import");
+        if (Set.of("/api/courses/import", "/api/courses/import/preview").contains(path))
+            return method.equals("POST") && permissions.contains("courses.import");
         if (Set.of("/api/jobs/import", "/api/jobs/import/preview").contains(path))
             return method.equals("POST") && permissions.contains("jobs.import");
         if (Set.of("/api/employees/import", "/api/employees/import/preview").contains(path))

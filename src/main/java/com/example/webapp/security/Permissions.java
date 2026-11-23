@@ -18,7 +18,7 @@ public final class Permissions {
         new Group("employees", "کارمندان", List.of("view", "create", "edit", "delete", "import")),
         new Group("employee-search", "جست‌وجوی کارکنان", List.of("view")),
         new Group("positions", "سمت‌های کارمندان", List.of("view", "create", "edit", "delete")),
-        new Group("courses", "دوره‌های آموزشی", List.of("view", "create", "edit", "delete")),
+        new Group("courses", "دوره‌های آموزشی", List.of("view", "create", "edit", "delete", "import")),
         new Group("trainings", "سوابق آموزشی", List.of("view", "create", "edit", "delete")),
         new Group("scores", "نمرات شایستگی", List.of("view", "create", "edit", "delete")),
         new Group("security", "کاربران و نقش‌ها", List.of("manage"))

@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#123d46"><title>شایستگی | مدیریت سرمایه انسانی</title>
-  <link rel="preload" href="/fonts/vazirmatn/Vazirmatn-Variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/auth.css"><link rel="stylesheet" href="/employee.css"><link rel="stylesheet" href="/assessment.css"><link rel="stylesheet" href="/training.css?v=20261117"><script src="/auth.js" defer></script><script src="/employee-fields.js?v=20261117-assessment-score" defer></script><link rel="stylesheet" href="/employee-search.css?v=20261117"><script src="/employee-search.js?v=20261117" defer></script><link rel="stylesheet" href="/job-tree.css?v=20261123"><script src="/job-tree.js?v=20261123" defer></script><script src="/app.js?v=20261123-job-tree" defer></script><script src="/employee-import.js?v=20261117-assessment-score" defer></script><script src="/assessment-details.js" defer></script><script src="/training-record.js?v=20261117" defer></script>
+  <link rel="preload" href="/fonts/vazirmatn/Vazirmatn-Variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/auth.css"><link rel="stylesheet" href="/employee.css"><link rel="stylesheet" href="/assessment.css"><link rel="stylesheet" href="/training.css?v=20261117"><script src="/auth.js" defer></script><script src="/employee-fields.js?v=20261117-assessment-score" defer></script><link rel="stylesheet" href="/employee-search.css?v=20261117"><script src="/employee-search.js?v=20261117" defer></script><link rel="stylesheet" href="/job-tree.css?v=20261123"><script src="/job-tree.js?v=20261123" defer></script><script src="/app.js?v=20261123-course-import" defer></script><script src="/employee-import.js?v=20261117-assessment-score" defer></script><script src="/assessment-details.js" defer></script><script src="/training-record.js?v=20261117" defer></script>
   <script src="/job-import.js?v=20261123" defer></script>
+  <script src="/course-import.js?v=20261123" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">رفتن به محتوای اصلی</a>
@@ -17,7 +18,7 @@
     <header class="topbar"><div class="breadcrumb">مدیریت سرمایه انسانی <span>/</span> <strong id="breadcrumb">نمای کلی</strong></div><div class="topbar-end"><time id="today"></time><div class="user-controls"><a href="/account.html" id="my-account">پروفایل من</a><button id="logout-button" type="button">خروج</button></div></div></header>
     <main id="main" tabindex="-1">
       <div id="load-error" class="alert error" role="alert" hidden></div>
-      <div class="page-header"><div><div class="eyebrow" id="eyebrow">سرمایه انسانی سازمان</div><h1 id="page-title">نمای کلی</h1><p id="page-description"></p></div><div class="page-actions"><button id="import-employees-button" class="button secondary" hidden>ورود از اکسل</button><button id="import-jobs-button" class="button secondary" hidden>ورود مشاغل از اکسل</button><button id="add-button" class="button primary" hidden></button></div></div>
+      <div class="page-header"><div><div class="eyebrow" id="eyebrow">سرمایه انسانی سازمان</div><h1 id="page-title">نمای کلی</h1><p id="page-description"></p></div><div class="page-actions"><button id="import-employees-button" class="button secondary" hidden>ورود از اکسل</button><button id="import-jobs-button" class="button secondary" hidden>ورود مشاغل از اکسل</button><button id="import-courses-button" class="button secondary" hidden>ورود دوره‌ها از اکسل</button><button id="add-button" class="button primary" hidden></button></div></div>
       <div id="page-content" aria-live="polite"><div class="loading">در حال دریافت اطلاعات…</div></div>
     </main>
     <footer>شایستگی <span>سامانه ثبت و مدیریت شایستگی‌های کارکنان</span></footer>
@@ -113,6 +114,22 @@
       <div id="job-import-results"></div>
     </div>
     <div class="dialog-footer"><button type="button" id="job-import-preview" class="button secondary">بررسی فایل و پیش‌نمایش</button><button type="button" id="job-import-save" class="button primary" disabled>تأیید و ثبت مشاغل</button><button type="button" class="button secondary" data-close="job-import-dialog">انصراف</button></div>
+  </dialog>
+  <dialog id="course-import-dialog" class="employee-import-dialog" aria-labelledby="course-import-title">
+    <div class="dialog-header"><div><div class="eyebrow">ثبت گروهی دوره‌های آموزشی</div><h2 id="course-import-title">ورود دوره‌ها از اکسل</h2></div><button type="button" class="icon-button" data-close="course-import-dialog" aria-label="بستن ورود دوره‌ها از اکسل">×</button></div>
+    <div class="dialog-body">
+      <p class="form-hint">۱. قالب را دریافت و تکمیل کنید. ۲. فایل را بررسی کنید. ۳. پس از بررسی پیش‌نمایش، ثبت را تأیید کنید.</p>
+      <a class="button secondary" href="/templates/courses-import.xlsx" download>دریافت قالب اکسل دوره‌ها</a>
+      <p class="import-guide">کد دوره، عنوان دوره و مدت دوره (ساعت) الزامی‌اند. برگزارکننده و توضیحات اختیاری‌اند. فقط برگهٔ اول خوانده می‌شود؛ هر ردیف یک دورهٔ جدید است.</p>
+      <p class="import-guide">مدت دوره باید بیشتر از صفر و حداکثر ۱۰۰۰۰ ساعت با حداکثر دو رقم اعشار باشد؛ مانند ۱۲٫۵. ارقام فارسی و انگلیسی پذیرفته می‌شوند. کدها را با قالب Text وارد کنید تا صفرهای ابتدایی حفظ شوند.</p>
+      <div class="field"><label for="course-import-file">فایل اکسل دوره‌ها</label><input id="course-import-file" type="file" accept=".xlsx,.xls" aria-describedby="course-import-help"><span class="field-help" id="course-import-help">xlsx یا xls، حداکثر ۵ مگابایت و ۱۰۰۰ ردیف اطلاعات.</span></div>
+      <p class="import-guide">کدهای تکراری پذیرفته نمی‌شوند. تا رفع همهٔ خطاها هیچ ردیفی ذخیره نمی‌شود؛ ثبت نهایی همهٔ ردیف‌ها را دوباره بررسی می‌کند.</p>
+      <div id="course-import-error" class="alert error" role="alert" hidden></div>
+      <p id="course-import-status" role="status"></p>
+      <label id="course-import-filter-label" class="import-error-filter" hidden><input id="course-import-errors-only" type="checkbox"> فقط ردیف‌های دارای خطا</label>
+      <div id="course-import-results"></div>
+    </div>
+    <div class="dialog-footer"><button type="button" id="course-import-preview" class="button secondary">بررسی فایل و پیش‌نمایش</button><button type="button" id="course-import-save" class="button primary" disabled>تأیید و ثبت دوره‌ها</button><button type="button" class="button secondary" data-close="course-import-dialog">انصراف</button></div>
   </dialog>
   <div id="toast" class="toast" role="status" hidden></div>
 </body>

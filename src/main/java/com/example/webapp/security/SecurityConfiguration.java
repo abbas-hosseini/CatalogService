@@ -38,7 +38,7 @@ public class SecurityConfiguration {
                 .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                 .requestMatchers("/login.html", "/login.js", "/auth.js", "/auth.css", "/styles.css", "/fonts/vazirmatn/**", "/favicon.ico",
                     "/api/auth/csrf", "/api/auth/captcha", "/api/auth/login").permitAll()
-                .requestMatchers("/api/**", "/access.html", "/templates/employees-import.xlsx", "/templates/jobs-import.xlsx")
+                .requestMatchers("/api/**", "/access.html", "/templates/employees-import.xlsx", "/templates/jobs-import.xlsx", "/templates/courses-import.xlsx")
                     .access((authentication, context) -> new AuthorizationDecision(authorization.allows(authentication.get(), context.getRequest())))
                 .anyRequest().authenticated())
             .requestCache(cache -> cache.disable())

@@ -110,6 +110,7 @@ function render() {
   $('add-button').hidden=!config||!state.ready||!canAdd(state.section);
   $('import-employees-button').hidden=state.section!=='employees'||!state.ready||!can('employees','import');
   $('import-jobs-button').hidden=state.section!=='jobs'||!state.ready||!can('jobs','import');
+  $('import-courses-button').hidden=state.section!=='courses'||!state.ready||!can('courses','import');
   if(config) $('add-button').innerHTML=icon('plus')+(state.section==='scores'?'ورود جدولی نمرات':`ثبت ${config.singular}`);
   if(!state.ready) {
     $('page-content').innerHTML='<div class="loading">دریافت اطلاعات انجام نشد. <button class="button secondary" id="retry-load">تلاش دوباره</button></div>';
