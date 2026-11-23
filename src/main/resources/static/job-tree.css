@@ -1,0 +1,11 @@
+.job-tree-controls{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);background:#fbfcfc}
+.job-tree-controls .button{font-size:11px;padding:6px 12px;min-height:32px}
+.job-tree-hint{font-size:11px;color:var(--muted);line-height:1.9;margin-inline-start:auto}
+.job-tree-name{gap:7px}
+.job-tree-toggle{display:inline-flex;align-items:center;justify-content:center;flex:0 0 28px;width:28px;height:28px;padding:4px;border:1px solid #d9e6e2;border-radius:7px;background:#f0f7f4;color:var(--teal);cursor:pointer}
+.job-tree-toggle:hover{background:#deeee8}
+.job-tree-toggle:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.job-tree-toggle svg{width:16px;height:16px;color:inherit}
+.job-tree-toggle[aria-expanded=true] svg{transform:rotate(-90deg)}
+.job-tree-spacer{display:inline-block;flex:0 0 28px;width:28px}
+@media(max-width:650px){.job-tree-hint{width:100%;margin-inline-start:0}.job-tree-controls{padding:12px}}
